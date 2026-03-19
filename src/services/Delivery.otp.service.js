@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs'
 import { OTP } from '../models/otp.model.js';
 import { sendMail } from '../services/mail.service.js';
 import { generateOTP } from '../utils/generateOtp.js';
@@ -176,94 +176,94 @@ const getDeliveryOTPTemplate = (otp, orderNumber, customerName) => `
 
 
 export async function sendDeliveryOTP(orderId) {
-    // Order  user populate
-    const order = await Order.findById(orderId).populate('user', 'email fullName');
-    if (!order) throw new ApiError(404, 'Order not found');
+  // Order  user populate
+  const order = await Order.findById(orderId).populate('user', 'email fullName');
+  if (!order) throw new ApiError(404, 'Order not found');
 
-    if (order.status !== 'shipped') {
-        throw new ApiError(400, 'OTP can only be sent for orders that are in "shipped" status');
-    }
+  if (order.status !== 'shipped') {
+    throw new ApiError(400, 'OTP can only be sent for orders that are in "shipped" status');
+  }
 
-    const customerEmail = order.user?.email;
-    const customerName = order.user?.fullName || 'Customer';
+  const customerEmail = order.user?.email;
+  const customerName = order.user?.fullName || 'Customer';
 
-    if (!customerEmail) {
-        throw new ApiError(400, 'Customer email not found for this order');
-    }
+  if (!customerEmail) {
+    throw new ApiError(400, 'Customer email not found for this order');
+  }
 
-    const otp = generateOTP();
-    const hashedOtp = await bcrypt.hash(otp.toString(), 10);
+  const otp = generateOTP();
+  const hashedOtp = await bcrypt.hash(otp.toString(), 10);
 
-    await OTP.deleteMany({
-        email: customerEmail,
-        type: 'delivery-confirm',
-        'metadata.orderId': orderId.toString(),
-        isUsed: false,
-    });
+  await OTP.deleteMany({
+    email: customerEmail,
+    type: 'delivery-confirm',
+    'metadata.orderId': orderId.toString(),
+    isUsed: false,
+  });
 
-    //  OTP 10 min expiry
-    await OTP.create({
-        email: customerEmail,
-        otp: hashedOtp,
-        type: 'delivery-confirm',
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-        metadata: { orderId: orderId.toString() },
-    });
+  //  OTP 10 min expiry
+  await OTP.create({
+    email: customerEmail,
+    otp: hashedOtp,
+    type: 'delivery-confirm',
+    expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    metadata: { orderId: orderId.toString() },
+  });
 
-    await sendMail({
-        to: customerEmail,
-        subject: `Delivery OTP for Order #${order.orderNumber} — Our City Nirman Pvt. Ltd.`,
-        html: getDeliveryOTPTemplate(otp, order.orderNumber, customerName),
-    });
+  await sendMail({
+    to: customerEmail,
+    subject: `Delivery OTP for Order #${order.orderNumber} — Our City Nirman Pvt. Ltd.`,
+    html: getDeliveryOTPTemplate(otp, order.orderNumber, customerName),
+  });
 
-    return { email: customerEmail, orderNumber: order.orderNumber };
+  return { email: customerEmail, orderNumber: order.orderNumber };
 }
 
 
 
 export async function verifyDeliveryOTP(orderId, otp) {
-    
-    const order = await Order.findById(orderId).populate('user', 'email');
-    if (!order) throw new ApiError(404, 'Order not found');
 
-    const customerEmail = order.user?.email;
-    if (!customerEmail) throw new ApiError(400, 'Customer email not found');
+  const order = await Order.findById(orderId).populate('user', 'email');
+  if (!order) throw new ApiError(404, 'Order not found');
 
-    
-    const record = await OTP.findOne({
-        email: customerEmail,
-        type: 'delivery-confirm',
-        isUsed: false,
-        'metadata.orderId': orderId.toString(),
-    }).sort({ createdAt: -1 });
+  const customerEmail = order.user?.email;
+  if (!customerEmail) throw new ApiError(400, 'Customer email not found');
 
-    if (!record) {
-        throw new ApiError(400, 'OTP not found or already used. Please request a new OTP.');
-    }
 
-    
-    if (record.expiresAt < new Date()) {
-        throw new ApiError(400, 'OTP has expired. Please request a new one.');
-    }
+  const record = await OTP.findOne({
+    email: customerEmail,
+    type: 'delivery-confirm',
+    isUsed: false,
+    'metadata.orderId': orderId.toString(),
+  }).sort({ createdAt: -1 });
 
-   
-    if (record.attempts >= 5) {
-        throw new ApiError(429, 'Too many incorrect attempts. Please request a new OTP.');
-    }
+  if (!record) {
+    throw new ApiError(400, 'OTP not found or already used. Please request a new OTP.');
+  }
 
-    
-    const isValid = await bcrypt.compare(otp.toString(), record.otp);
 
-    if (!isValid) {
-        record.attempts += 1;
-        await record.save();
-        const remaining = 5 - record.attempts;
-        throw new ApiError(400, `Invalid OTP. ${remaining} attempt(s) remaining.`);
-    }
+  if (record.expiresAt < new Date()) {
+    throw new ApiError(400, 'OTP has expired. Please request a new one.');
+  }
 
-    
-    record.isUsed = true;
+
+  if (record.attempts >= 5) {
+    throw new ApiError(429, 'Too many incorrect attempts. Please request a new OTP.');
+  }
+
+
+  const isValid = await bcrypt.compare(otp.toString(), record.otp);
+
+  if (!isValid) {
+    record.attempts += 1;
     await record.save();
+    const remaining = 5 - record.attempts;
+    throw new ApiError(400, `Invalid OTP. ${remaining} attempt(s) remaining.`);
+  }
 
-    return true;
+
+  record.isUsed = true;
+  await record.save();
+
+  return true;
 }

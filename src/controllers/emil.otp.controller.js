@@ -1,4 +1,4 @@
-import bcrypt from "bcrypt";
+import bcrypt from 'bcryptjs';
 import { OTP } from "../models/otp.model.js";
 import { sendMail } from "../services/mail.service.js";
 import { generateOTP } from "../utils/generateOtp.js";
