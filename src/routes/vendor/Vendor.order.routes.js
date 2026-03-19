@@ -12,7 +12,7 @@ import {
 import {
     sendDeliveryOTP,
     verifyDeliveryOTP,
-} from '../../services/delivery.otp.service.js';
+} from '../../services/Delivery.otp.service.js';
 import Order from '../../models/Order.model.js';
 import ApiError from '../../utils/ApiError.js';
 
