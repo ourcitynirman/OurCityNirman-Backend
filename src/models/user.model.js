@@ -54,7 +54,6 @@ const userSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
-
         lastLogin: {
             type: Date,
         },
@@ -62,7 +61,6 @@ const userSchema = new mongoose.Schema(
             type: String,
             default: null,
         },
-
         refreshToken: {
             type: String,
             select: false
@@ -71,7 +69,6 @@ const userSchema = new mongoose.Schema(
             type: Number,
             default: 0
         },
-
         emailVerifiedAt: {
             type: Date,
             default: null,
@@ -86,11 +83,7 @@ const userSchema = new mongoose.Schema(
     }
 );
 
-
-// Hash password before saving
-
 userSchema.pre("save", async function (next) {
-    // Only hash password if it's modified or new
     if (!this.isModified("password")) return next();
 
     try {
@@ -205,16 +198,5 @@ userSchema.index({ createdAt: -1 });
 userSchema.virtual("isEmailVerified").get(function () {
     return this.emailVerifiedAt !== null;
 });
-
-// Enable virtuals in JSON
-// userSchema.set("toJSON", {
-//     virtuals: true,
-//     transform: function (doc, ret) {
-//         delete ret.password;
-//         delete ret.refreshToken;
-//         delete ret.__v;
-//         return ret;
-//     },
-// });
 
 export const User = mongoose.model("User", userSchema);

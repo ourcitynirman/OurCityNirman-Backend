@@ -11,6 +11,7 @@ import { sendMail } from "../services/mail.service.js";
 import { generateOTP } from "../utils/generateOtp.js";
 import jwt from "jsonwebtoken";
 import sendEmail from "../utils/sendEmail.js";
+import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/Cloudinary.js";
 
 //  Generate Access and Refresh Tokens
 
@@ -709,6 +710,51 @@ const resetPassword = asyncHandler(async (req, res) => {
 
 
 
+const updateUserProfile = asyncHandler(async (req, res) => {
+  const { fullName, phone } = req.body;
+  const updates = {};
+  
+  if (fullName) updates.fullName = fullName.trim();
+  if (phone) {
+    const trimmedPhone = phone.trim();
+    if (!/^[0-9]{10}$/.test(trimmedPhone)) {
+      throw new ApiError(400, "Phone number must be exactly 10 digits");
+    }
+    const existing = await User.findOne({ phone: trimmedPhone, _id: { $ne: req.user._id } });
+    if (existing) throw new ApiError(409, "Phone number already in use by another account");
+    updates.phone = trimmedPhone;
+  }
+
+  if (req.file) {
+    const uploadResult = await uploadOnCloudinary(req.file.path, true);
+    if (!uploadResult || !uploadResult.success) {
+      throw new ApiError(500, "Failed to upload image. Try again.");
+    }
+    updates.profileImage = uploadResult.url;
+
+    if (req.user.profileImage && req.user.profileImage.includes("cloudinary.com")) {
+      try {
+        const urlParts = req.user.profileImage.split("/");
+        const filename = urlParts[urlParts.length - 1];
+        const publicId = filename.split(".")[0];
+        await deleteFromCloudinary(publicId, true);
+      } catch (err) {
+        console.warn("Could not delete old profile image:", err.message);
+      }
+    }
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    { $set: updates },
+    { new: true, runValidators: true }
+  ).select("-password -refreshToken");
+
+  if (!user) throw new ApiError(404, "User not found");
+
+  return res.status(200).json(new ApiResponse(200, user, "Profile updated successfully"));
+});
+
 export {
   generateAccessAndRefreshTokens,
   getOTPEmailTemplate,
@@ -723,5 +769,5 @@ export {
   logoutAllDevices,
   forgotPassword,
   resetPassword,
-
+  updateUserProfile,
 };
