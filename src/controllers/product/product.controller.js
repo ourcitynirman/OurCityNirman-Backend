@@ -13,7 +13,8 @@ const getAllProducts = asyncHandler(async (req, res) => {
     search, offer, bestFor
   } = req.query;
 
-  const query = { isActive: true };
+  const isAdminOrVendor = req.user && ['admin', 'vendor'].includes(req.user.role);
+  const query = isAdminOrVendor ? {} : { isActive: true };
 
   if (category) { const arr = category.split(',').map(c => c.trim()); query.category = arr.length > 1 ? { $in: arr } : arr[0]; }
   if (brand) { const arr = brand.split(',').map(b => b.trim()); query.brand = arr.length > 1 ? { $in: arr } : arr[0]; }
@@ -28,7 +29,13 @@ const getAllProducts = asyncHandler(async (req, res) => {
 
   const skip = (Number(page) - 1) * Number(limit);
   const [products, total] = await Promise.all([
-    Product.find(query).sort(sort).skip(skip).limit(Number(limit)).select('-__v -basePrice').lean(),
+    Product.find(query)
+      .sort(sort)
+      .skip(skip)
+      .limit(Number(limit))
+      .populate('vendorId', 'fullName email phone')
+      .select('-__v -basePrice')
+      .lean(),
     Product.countDocuments(query),
   ]);
 
@@ -91,16 +98,17 @@ const getProductsByVendor = asyncHandler(async (req, res) => {
 
 const createProduct = asyncHandler(async (req, res) => {
   if (!req.user?._id) throw new ApiError(401, 'Unauthorized');
-  if (req.user.role !== 'vendor') throw new ApiError(403, 'Vendors only');
-
   const vendorId = req.user._id;
-  const shop = await Shop.findOne({ vendor: vendorId });
+  const isAdmin = req.user.role === 'admin';
 
-  if (!shop) throw new ApiError(403, 'Create a shop first');
-  if (shop.verificationStatus === 'not_requested') throw new ApiError(403, 'Submit verification documents first');
-  if (shop.verificationStatus === 'pending') throw new ApiError(403, 'Verification under review, wait for approval');
-  if (shop.verificationStatus === 'rejected') throw new ApiError(403, `Verification rejected: "${shop.rejectionReason || 'Not specified'}". Re-submit documents`);
-  if (!shop.isVerified) throw new ApiError(403, 'Shop not verified. Contact support');
+  if (!isAdmin) {
+    const shop = await Shop.findOne({ vendor: vendorId });
+    if (!shop) throw new ApiError(403, 'Create a shop first');
+    if (shop.verificationStatus === 'not_requested') throw new ApiError(403, 'Submit verification documents first');
+    if (shop.verificationStatus === 'pending') throw new ApiError(403, 'Verification under review, wait for approval');
+    if (shop.verificationStatus === 'rejected') throw new ApiError(403, `Verification rejected: "${shop.rejectionReason || 'Not specified'}". Re-submit documents`);
+    if (!shop.isVerified) throw new ApiError(403, 'Shop not verified. Contact support');
+  }
 
   const {
     name, brand, company, category, description,
@@ -238,11 +246,12 @@ const updateProductStock = asyncHandler(async (req, res) => {
 
 const getProductStats = asyncHandler(async (req, res) => {
   if (!req.user?._id) throw new ApiError(401, 'Authentication required');
-  const vendorObjectId = new mongoose.Types.ObjectId(req.user._id);
+  const isAdmin = req.user.role === 'admin';
+  const matchFilter = isAdmin ? { isActive: true } : { vendorId: new mongoose.Types.ObjectId(req.user._id), isActive: true };
 
   const [stats, categoryStats, brandStats] = await Promise.all([
     Product.aggregate([
-      { $match: { vendorId: vendorObjectId, isActive: true } },
+      { $match: matchFilter },
       {
         $group: {
           _id: null,
@@ -272,13 +281,13 @@ const getProductStats = asyncHandler(async (req, res) => {
     ]),
 
     Product.aggregate([
-      { $match: { vendorId: vendorObjectId, isActive: true } },
+      { $match: matchFilter },
       { $group: { _id: '$category', count: { $sum: 1 }, totalStock: { $sum: '$quantityAvailable' }, avgPrice: { $avg: '$price' } } },
       { $sort: { count: -1 } },
     ]),
 
     Product.aggregate([
-      { $match: { vendorId: vendorObjectId, isActive: true } },
+      { $match: matchFilter },
       { $group: { _id: '$brand', count: { $sum: 1 }, totalStock: { $sum: '$quantityAvailable' }, avgRating: { $avg: '$rating' } } },
       { $sort: { count: -1 } },
       { $limit: 10 },
@@ -336,12 +345,15 @@ const getLowStockProducts = asyncHandler(async (req, res) => {
   if (!req.user?._id) throw new ApiError(401, 'Authentication required');
   const threshold = Number(req.query.threshold) || 50;
 
-  const products = await Product.find({
-    vendorId: req.user._id,
+  const isAdmin = req.user.role === 'admin';
+  const query = {
     isActive: true,
     inStock: true,
     quantityAvailable: { $lte: threshold },
-  })
+  };
+  if (!isAdmin) query.vendorId = req.user._id;
+
+  const products = await Product.find(query)
     .sort('quantityAvailable')
     .select('-__v')
     .lean();
@@ -369,8 +381,12 @@ const bulkUpdateProducts = asyncHandler(async (req, res) => {
   delete updates.vendorId;
   delete updates.slug;
 
+  const isAdmin = req.user.role === 'admin';
+  const filter = { _id: { $in: productIds }, isActive: true };
+  if (!isAdmin) filter.vendorId = req.user._id;
+
   const result = await Product.updateMany(
-    { _id: { $in: productIds }, vendorId: req.user._id, isActive: true },
+    filter,
     updates
   );
 

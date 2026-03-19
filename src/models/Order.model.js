@@ -308,7 +308,7 @@ orderSchema.methods.updateStatus = function (newStatus, note = null, changedBy =
 
     if (!allowed.includes(newStatus)) {
         throw new Error(
-            `Status "${this.status}" se "${newStatus}" nahi kar sakte. Allowed: [${allowed.join(', ') || 'none'}]`
+            `Cannot update status from "${this.status}" to "${newStatus}". Allowed transitions: [${allowed.join(', ') || 'none'}]`
         );
     }
 

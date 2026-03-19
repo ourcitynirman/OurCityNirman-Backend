@@ -37,7 +37,7 @@ import {
   compareProducts,
 } from '../../controllers/product/search.controller.js';
 
-import { authorize, verifyJWT } from "../../middlewares/auth.middleware.js";
+import { authorize, verifyJWT, optionalJWT } from "../../middlewares/auth.middleware.js";
 import { upload } from '../../middlewares/multer.middleware.js';
 
 const r = (windowMs, max, message) => rateLimit({ windowMs, max, standardHeaders: true, legacyHeaders: false, message: { success: false, message } });
@@ -53,7 +53,7 @@ const imageUpload = upload.fields([{ name: 'images', maxCount: 5 }]);
 
 const ProductsRoute = express.Router();
 
-ProductsRoute.get('/products', publicLimiter, getAllProducts);
+ProductsRoute.get('/products', optionalJWT, publicLimiter, getAllProducts);
 ProductsRoute.get('/products/featured', publicLimiter, getFeaturedProducts);
 ProductsRoute.get('/products/trending', publicLimiter, getTrendingProducts);
 ProductsRoute.get('/products/latest', publicLimiter, getLatestProducts);
@@ -98,7 +98,7 @@ ProductsRoute.get(
 
 ProductsRoute.post(
   '/product/create',
-  verifyJWT, authorize('vendor'),
+  verifyJWT, authorize('vendor', 'admin'),
   writeLimiter, imageUpload,
   createProduct
 );

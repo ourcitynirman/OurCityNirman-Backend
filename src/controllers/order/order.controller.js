@@ -228,7 +228,7 @@ export const cancelOrder = asyncHandler(async (req, res) => {
     if (!order.isCancellable) {
         throw new ApiError(
             400,
-            `Order cancel nahi ho sakta. Current status: "${order.status}". Sirf placed/confirmed orders cancel ho sakte hain.`
+            `Order cannot be cancelled. Current status is "${order.status}". Only placed or confirmed orders can be cancelled.`
         );
     }
 
@@ -268,14 +268,14 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
     if (!status) throw new ApiError(400, 'Status is required');
 
     if (status === 'cancelled') {
-        throw new ApiError(403, 'Vendor order cancel nahi kar sakta. Sirf user ya admin cancel kar sakte hain.');
+        throw new ApiError(403, 'Vendors are not permitted to cancel orders. Only users or admins possess cancellation rights.');
     }
 
     const VENDOR_ALLOWED = ['confirmed', 'processing', 'shipped', 'out_for_delivery', 'delivered'];
     if (!VENDOR_ALLOWED.includes(status)) {
         throw new ApiError(
             400,
-            `Vendor sirf ye statuses set kar sakta hai: ${VENDOR_ALLOWED.join(', ')}`
+            `Vendors can only set the following statuses: ${VENDOR_ALLOWED.join(', ')}`
         );
     }
 

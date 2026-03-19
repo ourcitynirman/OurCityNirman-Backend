@@ -23,7 +23,7 @@ const isDev = process.env.NODE_ENV !== "production";
 app.use(
   helmet({
     contentSecurityPolicy: isDev
-      ? false  // development mein CSP band — koi issue nahi hoga
+      ? false  // CSP disabled in development — no issues will occur
       : {
           directives: {
             defaultSrc: ["'self'"],

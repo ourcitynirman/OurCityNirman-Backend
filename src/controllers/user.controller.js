@@ -10,8 +10,8 @@ import { OTP } from "../models/otp.model.js";
 import { sendMail } from "../services/mail.service.js";
 import { generateOTP } from "../utils/generateOtp.js";
 import jwt from "jsonwebtoken";
-import sendEmail from "../utils/sendEmail.js";
-import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/Cloudinary.js";
+
+import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 
 //  Generate Access and Refresh Tokens
 
@@ -161,28 +161,102 @@ const getOTPEmailTemplate = (otp, fullName) => `
 </body>
 
 `;
+const getPasswordResetEmailTemplate = (resetLink, fullName) => `
+<body style="margin:0; padding:0; background:#fff7ed; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:500px; background:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 12px 40px rgba(234,88,12,0.12);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#ea580c,#f97316); padding:30px 24px; text-align:center;">
+              <h1 style="margin:0 0 5px; font-size:21px; font-weight:700; color:#ffffff; letter-spacing:0.4px;">Our City Nirman Pvt. Ltd.</h1>
+              <p style="margin:0; font-size:13px; color:rgba(255,255,255,0.88);">Building Better Cities Together</p>
+            </td>
+          </tr>
+
+          <!-- Accent bar -->
+          <tr><td style="height:4px; background:linear-gradient(90deg,#fed7aa,#f97316,#fed7aa);"></td></tr>
+
+          <!-- Icon -->
+          <tr>
+            <td style="text-align:center; padding:32px 24px 0;">
+              <div style="display:inline-block; background:#fff7ed; border:2px solid #fed7aa; border-radius:50%; width:60px; height:60px; line-height:60px; font-size:28px; text-align:center;">🔐</div>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:20px 36px 36px; text-align:center; color:#1f2937;">
+              <h2 style="margin:16px 0 8px; font-size:23px; font-weight:700; color:#9a3412;">Reset Your Password</h2>
+              <p style="margin:0 0 8px; font-size:15px; color:#374151;">Hello <strong>${fullName}</strong>,</p>
+              <p style="margin:0 0 30px; font-size:15px; color:#6b7280; line-height:1.7;">
+                We received a request to reset the password for your
+                <strong style="color:#ea580c;">Our City Nirman</strong> account.
+                Click the button below to set a new password.
+              </p>
+
+              <!-- Button -->
+              <a href="${resetLink}" target="_blank" style="display:inline-block; background:linear-gradient(135deg,#ea580c,#f97316); color:#ffffff; text-decoration:none; padding:15px 40px; border-radius:8px; font-size:15px; font-weight:600; letter-spacing:0.4px; box-shadow:0 4px 14px rgba(234,88,12,0.45);">
+                Reset My Password
+              </a>
+
+              <p style="margin:18px 0 0; font-size:13px; color:#f97316; font-weight:500;">
+                ⏱ This link is valid for <strong>15 minutes only</strong>
+              </p>
+
+             
+
+              <!-- Warning -->
+              <div style="margin:28px 0 0; padding:14px 18px; background:#fff7ed; border:1px solid #fed7aa; border-left:4px solid #f97316; border-radius:8px; text-align:left;">
+                <p style="margin:0; font-size:13px; color:#9a3412; line-height:1.6;">
+                  ⚠️ <strong>Didn't request this?</strong>
+                  If you did not request a password reset, simply ignore this email — your password will remain unchanged.
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr><td style="padding:0 36px;"><hr style="border:none; border-top:1px solid #ffedd5; margin:0;" /></td></tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background:#fff7ed; padding:20px 24px; text-align:center; font-size:12px; color:#a16207; line-height:1.7;">
+              <p style="margin:0 0 3px;">© 2026 <strong>Our City Nirman Pvt. Ltd.</strong> · All rights reserved</p>
+              <p style="margin:0; color:#d97706;">This is an automated email. Please do not reply.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+`;
 
 //  Step 1: Validate registration data and send OTP
 const registerUser = asyncHandler(async (req, res) => {
   const { fullName, email, phone, password, role } = req.body;
 
-  
+
   if (!fullName || !email || !phone || !password || !role) {
     throw new ApiError(400, "All fields are required");
   }
 
-  
+
   const trimmedEmail = email.trim().toLowerCase();
   const trimmedPhone = phone.trim();
   const trimmedFullName = fullName.trim();
 
-  
+
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(trimmedEmail)) {
     throw new ApiError(400, "Invalid email format");
   }
 
-  
+
   if (password.length < 6) {
     throw new ApiError(400, "Password must be at least 6 characters");
   }
@@ -196,12 +270,12 @@ const registerUser = asyncHandler(async (req, res) => {
     );
   }
 
-  
+
   if (!/^[0-9]{10}$/.test(trimmedPhone)) {
     throw new ApiError(400, "Phone number must be 10 digits");
   }
 
-  
+
 
   const existingUser = await User.findOne({
     $or: [{ email: trimmedEmail }, { phone: trimmedPhone }],
@@ -222,12 +296,12 @@ const registerUser = asyncHandler(async (req, res) => {
 
   await OTP.deleteMany({ email: trimmedEmail, type: "registration" });
 
-  
+
   await OTP.create({
     email: trimmedEmail,
     otp: hashedOtp,
     type: "registration",
-    expiresAt: new Date(Date.now() + 5 * 60 * 1000), 
+    expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     metadata: {
       fullName: trimmedFullName,
       phone: trimmedPhone,
@@ -236,7 +310,7 @@ const registerUser = asyncHandler(async (req, res) => {
     },
   });
 
-  
+
   await sendMail({
     to: trimmedEmail,
     subject: "Complete Your Registration - OTP Verification",
@@ -311,10 +385,10 @@ const verifyRegistrationOTP = asyncHandler(async (req, res) => {
     fullName,
     email: trimmedEmail,
     phone,
-    password, 
+    password,
     role,
     isActive: true,
-    isVerified: true, 
+    isVerified: true,
   });
 
   // Mark OTP as used
@@ -404,7 +478,7 @@ const resendRegistrationOTP = asyncHandler(async (req, res) => {
 const loginUser = asyncHandler(async (req, res) => {
   const { email, phone, password } = req.body;
 
-  
+
   const trimmedEmail = email?.trim().toLowerCase();
   const trimmedPhone = phone?.trim();
 
@@ -425,13 +499,13 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 
   const user = await User.findOne(query).select("+password");
- 
- 
+
+
   if (!user) {
     throw new ApiError(401, "Invalid credentials user");
   }
 
-  
+
   if (!user.isVerified) {
     throw new ApiError(403, "Please verify your email before logging in");
   }
@@ -450,13 +524,13 @@ const loginUser = asyncHandler(async (req, res) => {
   // Generate tokens
   const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id);
 
- 
+
   user.lastLogin = new Date();
   user.save({ validateBeforeSave: false }).catch((err) =>
     console.error("Failed to update last login:", err)
   );
 
- 
+
   const loggedInUser = await User.findById(user._id).select(
     "-password -refreshToken"
   );
@@ -548,7 +622,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
     const cookieOptions = {
       httpOnly: true,
-      secure: false,    
+      secure: false,
       sameSite: "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000,
     };
@@ -588,7 +662,7 @@ const logoutAllDevices = asyncHandler(async (req, res) => {
 
   await User.findByIdAndUpdate(userId, {
     $unset: { refreshToken: 1 },
-    $inc: { tokenVersion: 1 } 
+    $inc: { tokenVersion: 1 }
   });
 
 
@@ -659,15 +733,11 @@ const forgotPassword = asyncHandler(async (req, res) => {
   const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
   // send email 
-  await sendEmail({
-    to: user.email,
-    subject: "Reset Your Password",
-    html: `
-      <p>Click the link below to reset your password:</p>
-      <a href="${resetLink}">${resetLink}</a>
-      <p>This link is valid for 15 minutes.</p>
-    `,
-  });
+await sendMail({
+  to: user.email,
+  subject: "Reset Your Password – Our City Nirman",
+  html: getPasswordResetEmailTemplate(resetLink, user.fullName),
+});
 
   return res.status(200).json(
     new ApiResponse(200, {}, "Password reset link sent to email")
@@ -713,7 +783,7 @@ const resetPassword = asyncHandler(async (req, res) => {
 const updateUserProfile = asyncHandler(async (req, res) => {
   const { fullName, phone } = req.body;
   const updates = {};
-  
+
   if (fullName) updates.fullName = fullName.trim();
   if (phone) {
     const trimmedPhone = phone.trim();
@@ -758,6 +828,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 export {
   generateAccessAndRefreshTokens,
   getOTPEmailTemplate,
+  getPasswordResetEmailTemplate,
   registerUser,
   verifyRegistrationOTP,
   resendRegistrationOTP,

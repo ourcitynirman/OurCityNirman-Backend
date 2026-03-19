@@ -84,6 +84,27 @@ const verifyJWT = async (req, res, next) => {
   }
 };
 
+const optionalJWT = async (req, res, next) => {
+  try {
+    const token = extractToken(req);
+    if (!token) return next();
+
+    const decoded = decodeToken(token, process.env.ACCESS_TOKEN_SECRET);
+    if (!decoded) return next();
+
+    const userId = extractUserId(decoded);
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) return next();
+
+    const user = await User.findById(userId).select("-password -refreshToken");
+    if (!user || !user.isActive) return next();
+
+    req.user = user;
+    next();
+  } catch (error) {
+    next();
+  }
+};
+
 // authenticate 
 const authenticate = async (req, res, next) => {
   try {
@@ -308,6 +329,7 @@ export {
   isVendor,
   verifyProductOwner,
   verifyJWT,
+  optionalJWT,
   authorize,
   protect,
 };
