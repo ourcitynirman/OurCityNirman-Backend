@@ -3,6 +3,9 @@ import cors from "cors"
 import cookieParser from "cookie-parser"
 import helmet from "helmet"
 
+import dotenv from 'dotenv';
+dotenv.config();
+
 const app = express()
 
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN || "http://localhost:5174")
