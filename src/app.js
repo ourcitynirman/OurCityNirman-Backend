@@ -11,7 +11,7 @@ dotenv.config();
 console.log("CORS_ORIGIN =", process.env.CORS_ORIGIN);
 
 const app = express()
-app.set('trust proxy', 1); # rate limit proxy issue
+// app.set('trust proxy', 1); # rate limit proxy issue
 
 // const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN || "http://localhost:5174")
 //   .split(",")
