@@ -1,5 +1,11 @@
 import nodemailer from "nodemailer";
 
+import dotenv from 'dotenv';
+dotenv.config();
+
+// dotenv.config({ path: "/var/www/OurCityNirman/OurCityNirman-Backend/.env" });
+
+
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
 port: Number(process.env.EMAIL_PORT),
