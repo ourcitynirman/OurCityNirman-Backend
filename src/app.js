@@ -4,9 +4,9 @@ import cookieParser from "cookie-parser"
 import helmet from "helmet"
 
 import dotenv from 'dotenv';
-// dotenv.config();
+dotenv.config();
 
-dotenv.config({ path: "/var/www/OurCityNirman/OurCityNirman-Backend/.env" });
+// dotenv.config({ path: "/var/www/OurCityNirman/OurCityNirman-Backend/.env" });
 
 console.log("CORS_ORIGIN =", process.env.CORS_ORIGIN);
 
