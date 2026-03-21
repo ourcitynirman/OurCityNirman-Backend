@@ -10,6 +10,19 @@ console.log("CORS_ORIGIN =", process.env.CORS_ORIGIN);
 
 const app = express()
 
+// const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN || "http://localhost:5174")
+//   .split(",")
+//   .map(o => o.trim());
+
+// app.use(cors({
+//   origin: (origin, callback) => {
+//     if (!origin) return callback(null, true);
+//     if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+//     callback(new Error(`CORS blocked: ${origin}`));
+//   },
+//   credentials: true,
+// }));
+
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN || "http://localhost:5174")
   .split(",")
   .map(o => o.trim());
@@ -17,7 +30,12 @@ const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN || "http://localhost:5174")
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
-    if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+
+    const isAllowed = ALLOWED_ORIGINS.some(o => origin.startsWith(o));
+
+    if (isAllowed) return callback(null, true);
+
+    console.error(`CORS blocked: ${origin}`);
     callback(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
