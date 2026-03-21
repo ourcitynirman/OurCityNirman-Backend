@@ -50,7 +50,7 @@ app.use(
               "'self'",
               "data:",
               "https://*.razorpay.com",
-              "https://res.cloudinary.com", // agar cloudinary use karte ho
+              "https://res.cloudinary.com", // if using Cloudinary
             ],
             styleSrc: ["'self'", "'unsafe-inline'"],
           },

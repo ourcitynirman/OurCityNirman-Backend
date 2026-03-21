@@ -3,7 +3,7 @@ import {
     getVendorOrders,
     getVendorOrder,
     updateOrderStatus,
-} from '../../controllers/vandor/Vendor.order.controller.js';
+} from '../../controllers/vendor/Vendor.order.controller.js';
 import {
     authenticate,
     authorize,

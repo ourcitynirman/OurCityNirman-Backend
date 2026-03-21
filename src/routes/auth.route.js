@@ -13,7 +13,7 @@ import {
     updateUserProfile,
 } from "../controllers/user.controller.js";
 
-import { loginLimiter } from "../middlewares/rateLimiter.midleware.js";
+import { loginLimiter } from "../middlewares/rateLimiter.middleware.js";
 import {  verifyJWT } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
 
