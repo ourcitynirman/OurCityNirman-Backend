@@ -11,7 +11,7 @@ import { authenticate, authorize } from "../../middlewares/auth.middleware.js";
 
 const WishlistRouter = Router();
 
-WishlistRouter.use(authenticate, authorize("user"));
+WishlistRouter.use(authenticate, authorize("user", "vendor"));
 
 WishlistRouter.get("/",                          getWishlist);
 WishlistRouter.post("/add",                      addToWishlist);
