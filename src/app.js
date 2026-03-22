@@ -8,7 +8,7 @@ dotenv.config();
 
 // dotenv.config({ path: "/var/www/OurCityNirman/OurCityNirman-Backend/.env" });
 
-console.log("CORS_ORIGIN =", process.env.CORS_ORIGIN);
+// console.log("CORS_ORIGIN =", process.env.CORS_ORIGIN);
 
 const app = express()
 // app.set('trust proxy', 1); # rate limit proxy issue
