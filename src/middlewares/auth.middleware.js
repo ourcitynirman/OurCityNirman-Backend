@@ -11,7 +11,7 @@ const extractToken = (req) => {
   }
 
   const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith("Bearer ")) {
+  if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
     const token = authHeader.split(" ")[1];
     if (token && token.split(".").length === 3) {
       return token;
