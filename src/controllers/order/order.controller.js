@@ -9,12 +9,21 @@ import ApiError     from '../../utils/ApiError.js';
 const DELIVERY_CHARGE     = 50;
 const FREE_DELIVERY_ABOVE = 50_000;
 
-function calcDeliveryCharge(subtotal) {
-    return subtotal >= FREE_DELIVERY_ABOVE ? 0 : DELIVERY_CHARGE;
+const DELIVERY_RATES = {
+    standard: 0,
+    express: 99,
+    same_day: 199
+};
+
+function calcDeliveryCharge(subtotal, type = 'standard') {
+    if (type === 'standard' || !DELIVERY_RATES[type]) {
+       return subtotal >= 50000 ? 0 : 50; 
+    }
+    return DELIVERY_RATES[type];
 }
 
 export const placeOrder = asyncHandler(async (req, res) => {
-    const { addressId, paymentMethod = 'cod', notes } = req.body;
+    const { addressId, paymentMethod = 'cod', notes, deliveryType = 'standard' } = req.body;
 
     if (!addressId) throw new ApiError(400, 'Delivery address is required');
 
@@ -71,9 +80,18 @@ export const placeOrder = asyncHandler(async (req, res) => {
     }
 
     const subtotal          = orderItems.reduce((sum, i) => sum + i.totalPrice, 0);
-    const deliveryCharge    = calcDeliveryCharge(subtotal);
+    const deliveryCharge    = calcDeliveryCharge(subtotal, deliveryType);
     const totalAmount       = Math.round((subtotal + deliveryCharge) * 100) / 100;
-    const estimatedDelivery = calcEstimatedDelivery(categories);
+    
+    // adjust estimated delivery based on deliveryType
+    let estimatedDelivery = calcEstimatedDelivery(categories);
+    if (deliveryType === 'same_day') {
+        estimatedDelivery = new Date(); // today
+    } else if (deliveryType === 'express') {
+        const d = new Date();
+        d.setDate(d.getDate() + 2); // 2 days
+        estimatedDelivery = d;
+    }
 
     const deliveryAddress = {
         fullName: address.fullName,
@@ -99,6 +117,7 @@ export const placeOrder = asyncHandler(async (req, res) => {
                     items: orderItems,
                     deliveryAddress,
                     subtotal,
+                    deliveryType,
                     deliveryCharge,
                     totalAmount,
                     paymentMethod,

@@ -132,6 +132,11 @@ const orderSchema = new mongoose.Schema(
         },
 
         subtotal:       { type: Number, required: true, min: 0 },
+        deliveryType: {
+            type: String,
+            enum: ['standard', 'express', 'same_day'],
+            default: 'standard'
+        },
         deliveryCharge: { type: Number, default: 0, min: 0 },
         discount:       { type: Number, default: 0, min: 0 },
         totalAmount:    { type: Number, required: true, min: 0 },

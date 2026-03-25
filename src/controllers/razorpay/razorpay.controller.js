@@ -9,28 +9,31 @@ import Address from '../../models/UserAddress.model.js';
 import asyncHandler from '../../utils/asyncHandler.js';
 import ApiError from '../../utils/ApiError.js';
 
-const DELIVERY_CHARGE = 50;
-const FREE_DELIVERY_ABOVE = 50_000;
+const DELIVERY_RATES = {
+    standard: 0,
+    express: 99,
+    same_day: 199
+};
 
-function calcDeliveryCharge(subtotal) {
-    return subtotal >= FREE_DELIVERY_ABOVE ? 0 : DELIVERY_CHARGE;
+function calcDeliveryCharge(subtotal, type = 'standard') {
+    if (type === 'standard' || !DELIVERY_RATES[type]) {
+       return subtotal >= 50000 ? 0 : 50; 
+    }
+    return DELIVERY_RATES[type];
 }
 
 export const createRazorpayOrder = asyncHandler(async (req, res) => {
-    const { addressId } = req.body;
-
+    const { addressId, deliveryType = 'standard' } = req.body;
 
     if (!addressId) throw new ApiError(400, 'Delivery address is required');
 
     const address = await Address.findOne({ _id: addressId, user: req.user._id });
-    console.log('Step 4: address found =', !!address);
     if (!address) throw new ApiError(404, 'Delivery address not found');
 
     const cart = await Cart.findOne({ user: req.user._id }).populate({
         path: 'items.product',
         select: 'name price images category brand quantityAvailable isActive vendorId',
     });
-    console.log('Step 5: cart items    =', cart?.items?.length ?? 0);
     if (!cart || cart.items.length === 0) throw new ApiError(400, 'Your cart is empty');
 
     const orderItems = [];
@@ -71,15 +74,20 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
     }
 
     const subtotal = orderItems.reduce((sum, i) => sum + i.totalPrice, 0);
-    const deliveryCharge = calcDeliveryCharge(subtotal);
+    const deliveryCharge = calcDeliveryCharge(subtotal, deliveryType);
     const totalAmount = Math.round((subtotal + deliveryCharge) * 100) / 100;
-    const estimatedDelivery = calcEstimatedDelivery(categories);
+    
+    // adjust estimated delivery based on deliveryType
+    let estimatedDelivery = calcEstimatedDelivery(categories);
+    if (deliveryType === 'same_day') {
+        estimatedDelivery = new Date(); // today
+    } else if (deliveryType === 'express') {
+        const d = new Date();
+        d.setDate(d.getDate() + 2); // 2 days
+        estimatedDelivery = d;
+    }
+    
     const amountInPaise = Math.round(totalAmount * 100);
-
-    console.log('Step 6: subtotal      =', subtotal);
-    console.log('Step 6: deliveryCharge=', deliveryCharge);
-    console.log('Step 6: totalAmount   =', totalAmount);
-    console.log('Step 6: amountInPaise =', amountInPaise);
 
     const deliveryAddress = {
         fullName: address.fullName,
@@ -102,18 +110,10 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
            receipt: `rcpt_${req.user._id.toString().slice(-8)}_${Date.now().toString().slice(-8)}`,
             notes: { userId: req.user._id.toString() },
         });
-        console.log('Step 8: rzpOrder.id   =', rzpOrder?.id);
     } catch (rzpErr) {
-       
-        const msg =
-            rzpErr?.error?.description ??
-            rzpErr?.message ??
-            'Razorpay order creation failed. Check your API keys.';
-
-        throw new ApiError(502, msg);
+        throw new ApiError(502, 'Razorpay order creation failed. Check your API keys.');
     }
 
-    console.log('Step 9: Saving order to DB ...');
     let dbOrder;
     try {
         dbOrder = await Order.create({
@@ -121,6 +121,7 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
             items: orderItems,
             deliveryAddress,
             subtotal,
+            deliveryType,
             deliveryCharge,
             totalAmount,
             paymentMethod: 'online',
