@@ -217,7 +217,7 @@ orderSchema.pre('save', function (next) {
 
 
 orderSchema.virtual('isCancellable').get(function () {
-    return ['placed', 'confirmed'].includes(this.status);
+    return !['delivered', 'cancelled', 'refunded'].includes(this.status);
 });
 
 orderSchema.virtual('totalItems').get(function () {
@@ -267,7 +267,7 @@ orderSchema.statics.getOverdueOrders = function () {
 
 
 orderSchema.methods.cancel = function (reason = '', cancelledBy = 'user', session = null) {
-    if (!['placed', 'confirmed'].includes(this.status)) return null;
+    if (['delivered', 'cancelled', 'refunded'].includes(this.status)) return null;
 
     this.status       = 'cancelled';
     this.cancelReason = reason;

@@ -247,7 +247,7 @@ export const cancelOrder = asyncHandler(async (req, res) => {
     if (!order.isCancellable) {
         throw new ApiError(
             400,
-            `Order cannot be cancelled. Current status is "${order.status}". Only placed or confirmed orders can be cancelled.`
+            `Order cannot be cancelled. Current status is "${order.status}". Delivered or already completed orders cannot be cancelled.`
         );
     }
 
