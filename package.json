@@ -1,7 +1,7 @@
 {
-  "name": "city_nest_backend",
+  "name": "ourcitynirman_backend",
   "version": "1.0.0",
-  "description": "backend for city nest project",
+  "description": "backend for ourcitynirman project",
   "type": "module",
   "main": "index.js",
   "scripts": {
