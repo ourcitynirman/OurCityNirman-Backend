@@ -378,11 +378,11 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
 
-  const allowedRoles = ["user", "vendor", "homeowner", "labour"];
+  const allowedRoles = ["user", "vendor", "homeowner", "Worker/Technician", "Other", "builder", "agent"];
   if (!allowedRoles.includes(role)) {
     throw new ApiError(
       400,
-      "Invalid role. Must be user, vendor, homeowner or labour"
+      "Invalid role. Must be one of: user, vendor, homeowner, Worker/Technician, Other, builder, or agent"
     );
   }
 
