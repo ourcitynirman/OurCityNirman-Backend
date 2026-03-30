@@ -387,8 +387,8 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
 
-  if (!/^[0-9]{10}$/.test(trimmedPhone)) {
-    throw new ApiError(400, "Phone number must be 10 digits");
+  if (!/^[6-9]\d{9}$/.test(trimmedPhone)) {
+    throw new ApiError(400, "Invalid mobile number");
   }
 
 
