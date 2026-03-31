@@ -302,7 +302,7 @@ const verifyProductOwner = async (req, res, next) => {
       return next(new ApiError(400, "Invalid product ID format"));
     }
 
-    const product = await Product.findById(productId); 
+    const product = await Product.findById(productId);
     if (!product) return next(new ApiError(404, "Product not found"));
 
     const reqUserId = req.user._id?.toString() || req.user.id?.toString();

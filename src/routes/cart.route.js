@@ -11,7 +11,7 @@ import { authenticate, authorize } from "../middlewares/auth.middleware.js";
 
 const CartRouter = Router();
 
-CartRouter.use(authenticate, authorize("user", "vendor"));
+CartRouter.use(authenticate, authorize("user", "vendor", "homeowner", "Worker/Technician", "Other", "builder", "agent", "admin"));
 
 CartRouter.get("/",                                getCart);
 CartRouter.post("/items",                          addToCart);

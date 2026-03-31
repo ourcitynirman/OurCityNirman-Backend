@@ -22,8 +22,8 @@ import {
 
 const OrderRouter = Router();
 
-OrderRouter.post('/create-razorpay-order', authenticate, authorize('user'), createRazorpayOrder);
-OrderRouter.post('/verify-payment',        authenticate, authorize('user'), verifyRazorpayPayment);
+OrderRouter.post('/create-razorpay-order', authenticate, authorize('user', 'vendor', 'homeowner', 'Worker/Technician', 'Other', 'builder', 'agent', 'admin'), createRazorpayOrder);
+OrderRouter.post('/verify-payment',        authenticate, authorize('user', 'vendor', 'homeowner', 'Worker/Technician', 'Other', 'builder', 'agent', 'admin'), verifyRazorpayPayment);
 
 OrderRouter.get(
     '/vendor/my-orders',
@@ -70,35 +70,35 @@ OrderRouter.patch(
 OrderRouter.post(
     '/',
     authenticate,
-    authorize('user'),
+    authorize('user', 'vendor', 'homeowner', 'Worker/Technician', 'Other', 'builder', 'agent', 'admin'),
     placeOrder                  
 );
 
 OrderRouter.get(
     '/',
     authenticate,
-    authorize('user'),
+    authorize('user', 'vendor', 'homeowner', 'Worker/Technician', 'Other', 'builder', 'agent', 'admin'),
     getMyOrders
 );
 
 OrderRouter.get(
     '/:orderId/history',
     authenticate,
-    authorize('user', 'vendor', 'admin'),
+    authorize('user', 'vendor', 'homeowner', 'Worker/Technician', 'Other', 'builder', 'agent', 'admin'),
     getOrderHistory
 );
 
 OrderRouter.get(
     '/:orderId',
     authenticate,
-    authorize('user', 'vendor', 'admin'),
+    authorize('user', 'vendor', 'homeowner', 'Worker/Technician', 'Other', 'builder', 'agent', 'admin'),
     getOrderById
 );
 
 OrderRouter.patch(
     '/:orderId/cancel',
     authenticate,
-    authorize('user'),
+    authorize('user', 'vendor', 'homeowner', 'Worker/Technician', 'Other', 'builder', 'agent', 'admin'),
     cancelOrder                 
 );
 
