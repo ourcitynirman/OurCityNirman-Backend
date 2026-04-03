@@ -48,6 +48,9 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
         if (!product.vendorId) {
             throw new ApiError(400, `Vendor not found for "${product.name}"`);
         }
+        if (!Number.isInteger(item.quantity) || item.quantity < 1) {
+            throw new ApiError(400, `Invalid quantity for "${product.name}"`);
+        }
         if (product.quantityAvailable < item.quantity) {
             throw new ApiError(
                 400,
@@ -162,34 +165,33 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Payment verification data incomplete');
     }
 
-    const expectedSignature = crypto
-        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-        .digest('hex');
-
-
-    if (expectedSignature !== razorpay_signature) {
-        await Order.findByIdAndUpdate(dbOrderId, {
-            paymentStatus: 'failed',
-            $push: {
-                statusHistory: {
-                    status: 'cancelled',
-                    changedBy: 'system',
-                    note: 'Payment signature verification failed',
-                },
-            },
-        });
-        throw new ApiError(400, 'Payment verification failed. Invalid signature.');
-    }
-
     const order = await Order.findOne({
         _id: dbOrderId,
         user: req.user._id,
         paymentStatus: 'pending',
     });
 
-    console.log('VERIFY Step 6: order found =', !!order);
     if (!order) throw new ApiError(404, 'Order not found or already processed');
+
+    if (order.razorpayOrderId !== razorpay_order_id) {
+        throw new ApiError(400, 'Payment verification failed. Order mismatch.');
+    }
+
+    const expectedSignature = crypto
+        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+        .digest('hex');
+
+    if (expectedSignature !== razorpay_signature) {
+        order.paymentStatus = 'failed';
+        order.statusHistory.push({
+            status: 'cancelled',
+            changedBy: 'system',
+            note: 'Payment signature verification failed',
+        });
+        await order.save();
+        throw new ApiError(400, 'Payment verification failed. Invalid signature.');
+    }
 
     const session = await mongoose.startSession();
     try {

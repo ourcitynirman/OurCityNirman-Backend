@@ -27,7 +27,7 @@ export const placeOrder = asyncHandler(async (req, res) => {
 
     if (!addressId) throw new ApiError(400, 'Delivery address is required');
 
-    const VALID_METHODS = ['cod', 'wallet'];
+    const VALID_METHODS = ['cod'];
     if (!VALID_METHODS.includes(paymentMethod)) {
         throw new ApiError(400, `paymentMethod must be one of: ${VALID_METHODS.join(', ')}`);
     }
@@ -52,6 +52,10 @@ export const placeOrder = asyncHandler(async (req, res) => {
         if (!product)          throw new ApiError(400, 'One or more products in your cart no longer exist');
         if (!product.isActive) throw new ApiError(400, `Product "${product.name}" is no longer available`);
         if (!product.vendorId) throw new ApiError(400, `Vendor not found for "${product.name}"`);
+
+        if (!Number.isInteger(item.quantity) || item.quantity < 1) {
+            throw new ApiError(400, `Invalid quantity for "${product.name}"`);
+        }
 
         if (product.quantityAvailable < item.quantity) {
             throw new ApiError(
