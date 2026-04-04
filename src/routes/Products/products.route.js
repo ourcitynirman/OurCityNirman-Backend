@@ -68,9 +68,9 @@ ProductsRoute.post('/recently-viewed', recentlyViewedLimiter, logRecentlyViewed)
 ProductsRoute.post('/recently-viewed/fetch', recentlyViewedLimiter, getRecentlyViewed);
 ProductsRoute.post('/compare', compareLimiter, compareProducts);
 
-ProductsRoute.get('/product/slug/:slug', publicLimiter, getProductBySlug);
-ProductsRoute.get('/product/id/:id', publicLimiter, getProductById);
-ProductsRoute.get('/product/:identifier', publicLimiter, getProductByIdentifier);
+ProductsRoute.get('/slug/:slug', publicLimiter, getProductBySlug);
+ProductsRoute.get('/id/:id', publicLimiter, getProductById);
+ProductsRoute.get('/:identifier', publicLimiter, getProductByIdentifier);
 
 ProductsRoute.get(
   '/products/low-stock',
@@ -97,21 +97,21 @@ ProductsRoute.get(
 );
 
 ProductsRoute.post(
-  '/product/create',
+  '/create',
   verifyJWT, authorize('vendor', 'admin'),
   writeLimiter, imageUpload,
   createProduct
 );
 
 ProductsRoute.put(
-  '/product/:id',
+  '/:id',
   verifyJWT, authorize('vendor', 'admin'),
   imageUpload,
   updateProduct
 );
 
 ProductsRoute.patch(
-  '/product/:id/stock',
+  '/:id/stock',
   verifyJWT, authorize('vendor', 'admin'),
   updateProductStock
 );
@@ -123,37 +123,37 @@ ProductsRoute.patch(
 );
 
 ProductsRoute.patch(
-  '/product/:id/base-price',
+  '/:id/base-price',
   verifyJWT, authorize('vendor', 'admin'),
   updateBasePrice
 );
 
 ProductsRoute.patch(
-  '/product/:id/rating',
+  '/:id/rating',
   verifyJWT, authorize('admin'),
   updateProductRating
 );
 
 ProductsRoute.patch(
-  '/product/:id/review',
+  '/:id/review',
   verifyJWT, authorize('admin'),
   addProductReview
 );
 
 ProductsRoute.patch(
-  '/product/:id/toggle-status',
+  '/:id/toggle-status',
   verifyJWT, authorize('vendor', 'admin'),
   toggleProductStatus
 );
 
 ProductsRoute.patch(
-  '/product/:id/featured',
+  '/:id/featured',
   verifyJWT, authorize('admin'),
   toggleFeatured
 );
 
 ProductsRoute.patch(
-  '/product/:id/trending',
+  '/:id/trending',
   verifyJWT, authorize('admin'),
   toggleTrending
 );
@@ -165,13 +165,13 @@ ProductsRoute.patch(
 );
 
 ProductsRoute.delete(
-  '/product/:id/permanent',
+  '/:id/permanent',
   verifyJWT, authorize('admin'),
   permanentDeleteProduct
 );
 
 ProductsRoute.delete(
-  '/product/:id',
+  '/:id',
   verifyJWT, authorize('vendor', 'admin'),
   deleteProduct
 );
