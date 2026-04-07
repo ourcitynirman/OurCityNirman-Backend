@@ -106,7 +106,7 @@ const optionalJWT = async (req, res, next) => {
 };
 
 // authenticate 
-const authenticate = async (req, res, next) => {
+const authenticate = asyncHandler(async (req, res, next) => {
   try {
     const token = extractToken(req);
 
@@ -142,7 +142,7 @@ const authenticate = async (req, res, next) => {
     console.error("authenticate error:", error.message);
     return next(new ApiError(401, "Authentication failed"));
   }
-};
+});
 
 // protect 
 const protect = asyncHandler(async (req, res, next) => {
@@ -251,7 +251,7 @@ const checkOwnership = (param = "id", source = "params") => {
 };
 
 // verifyRefreshToken 
-const verifyRefreshToken = async (req, res, next) => {
+const verifyRefreshToken = asyncHandler(async (req, res, next) => {
   try {
     const token =
       req.cookies?.refreshToken || req.body?.refreshToken || null;
@@ -291,10 +291,10 @@ const verifyRefreshToken = async (req, res, next) => {
     console.error("verifyRefreshToken error:", error.message);
     return next(new ApiError(500, "Token verification failed"));
   }
-};
+});
 
 // verifyProductOwner 
-const verifyProductOwner = async (req, res, next) => {
+const verifyProductOwner = asyncHandler(async (req, res, next) => {
   try {
     const { productId } = req.params;
 
@@ -318,7 +318,7 @@ const verifyProductOwner = async (req, res, next) => {
     console.error("verifyProductOwner error:", err.message);
     return next(new ApiError(500, "Internal Server Error"));
   }
-};
+});
 
 
 export {
