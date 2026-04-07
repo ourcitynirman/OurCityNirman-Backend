@@ -31,10 +31,21 @@ export const getMyInvoices = asyncHandler(async (req, res) => {
 export const getInvoiceByOrder = asyncHandler(async (req, res) => {
     const { orderId } = req.params;
 
-    const invoice = await Invoice.findOne({ order: orderId, user: req.user._id });
+    let invoice = await Invoice.findOne({ order: orderId, user: req.user._id });
     
     if (!invoice) {
-        throw new ApiError(404, "Invoice not found for this order");
+        // Fallback: Try to generate if order belongs to user
+        const order = await Order.findOne({ _id: orderId, user: req.user._id });
+        if (!order) {
+            throw new ApiError(404, "Order not found or access denied");
+        }
+
+        const result = await createAndSendInvoice(order, req.user);
+        if (result.success) {
+            invoice = result.invoice;
+        } else {
+            throw new ApiError(500, `Failed to generate invoice on demand: ${result.error}`);
+        }
     }
 
     return res.status(200).json(
