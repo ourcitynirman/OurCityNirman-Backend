@@ -15,7 +15,7 @@ const Addressrouter = Router();
 Addressrouter.get(
     '/',
     authenticate,
-    authorize('user',  'admin'),
+    authorize('user', 'vendor', 'homeowner', 'Worker/Technician', 'Other', 'builder', 'agent', 'admin'),
     getAddresses
 );
 
@@ -23,7 +23,7 @@ Addressrouter.get(
 Addressrouter.post(
     '/add',
     authenticate,
-    authorize('user', 'admin'),
+    authorize('user', 'vendor', 'homeowner', 'Worker/Technician', 'Other', 'builder', 'agent', 'admin'),
     addAddress
 );
 
@@ -31,14 +31,14 @@ Addressrouter.post(
 Addressrouter.post(
     '/bulk',
     authenticate,
-    authorize('user', 'admin'),
+    authorize('user', 'vendor', 'homeowner', 'Worker/Technician', 'Other', 'builder', 'agent', 'admin'),
     addMultipleAddresses
 );
 
 Addressrouter.get(
     '/:id',
     authenticate,
-    authorize('user', 'admin'),
+    authorize('user', 'vendor', 'homeowner', 'Worker/Technician', 'Other', 'builder', 'agent', 'admin'),
     getAddress
 );
 
@@ -46,7 +46,7 @@ Addressrouter.get(
 Addressrouter.put(
     '/:id',
     authenticate,
-    authorize('user', 'admin'),
+    authorize('user', 'vendor', 'homeowner', 'Worker/Technician', 'Other', 'builder', 'agent', 'admin'),
     updateAddress
 );
 
@@ -55,7 +55,7 @@ Addressrouter.put(
 Addressrouter.delete(
     '/:id',
     authenticate,
-    authorize('user',  'admin'),
+    authorize('user', 'vendor', 'homeowner', 'Worker/Technician', 'Other', 'builder', 'agent', 'admin'),
     deleteAddress
 );
   
@@ -63,7 +63,7 @@ Addressrouter.delete(
 Addressrouter.patch( 
     '/:id/set-default',
     authenticate,
-    authorize('user',  'admin'),
+    authorize('user', 'vendor', 'homeowner', 'Worker/Technician', 'Other', 'builder', 'agent', 'admin'),
     setDefaultAddress
 );
 

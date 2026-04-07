@@ -21,28 +21,28 @@ router.post("/webhook", (req, res, next) => {
 router.post(
     "/create-order",
     authenticate,
-    authorize("user"),
+    authorize("user", "vendor", "homeowner", "Worker/Technician", "Other", "builder", "agent", "admin"),
     createPaymentOrder
 );
 
 router.post(
     "/verify",
     authenticate,
-    authorize("user"),
+    authorize("user", "vendor", "homeowner", "Worker/Technician", "Other", "builder", "agent", "admin"),
     verifyPayment
 );
 
 router.post(
     "/retry",
     authenticate,
-    authorize("user"),
+    authorize("user", "vendor", "homeowner", "Worker/Technician", "Other", "builder", "agent", "admin"),
     retryPayment
 );
 
 router.get(
     "/:orderId",
     authenticate,
-    authorize("user", "admin"),
+    authorize("user", "vendor", "homeowner", "Worker/Technician", "Other", "builder", "agent", "admin"),
     getPaymentByOrder
 );
 
