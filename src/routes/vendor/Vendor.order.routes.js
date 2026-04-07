@@ -26,7 +26,7 @@ VendorOrderrouter.use(requireVerification);
 
 
 
-async function requireDeliveryOtp(req, res, next) {
+const requireDeliveryOtp = asyncHandler(async (req, res, next) => {
     if (req.body.status !== 'delivered') {
         req.otpVerified = false;
         return next();
@@ -51,7 +51,7 @@ async function requireDeliveryOtp(req, res, next) {
     } catch (err) {
         next(err);
     }
-}
+});
 
 
 function maskEmail(email) {
@@ -68,7 +68,7 @@ VendorOrderrouter.get('/', getVendorOrders);
 VendorOrderrouter.get('/:id', getVendorOrder);
 
 
-VendorOrderrouter.post('/:id/send-delivery-otp', async (req, res, next) => {
+VendorOrderrouter.post('/:id/send-delivery-otp', asyncHandler(async (req, res, next) => {
     try {
         const { id } = req.params;
 
@@ -97,7 +97,7 @@ VendorOrderrouter.post('/:id/send-delivery-otp', async (req, res, next) => {
     } catch (err) {
         next(err);
     }
-});
+}));
 
 // status placed confirmed processing shipped (OTP)→delivered
 VendorOrderrouter.patch('/:id/status', requireDeliveryOtp, updateOrderStatus);

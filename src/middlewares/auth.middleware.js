@@ -34,7 +34,7 @@ const extractUserId = (decoded) => {
 };
 
 // verifyJWT 
-const verifyJWT = async (req, res, next) => {
+const verifyJWT = asyncHandler(async (req, res, next) => {
   try {
     const token = extractToken(req);
 
@@ -82,9 +82,9 @@ const verifyJWT = async (req, res, next) => {
       .status(401)
       .json({ success: false, message: "Authentication failed" });
   }
-};
+});
 
-const optionalJWT = async (req, res, next) => {
+const optionalJWT = asyncHandler(async (req, res, next) => {
   try {
     const token = extractToken(req);
     if (!token) return next();
@@ -103,7 +103,7 @@ const optionalJWT = async (req, res, next) => {
   } catch (error) {
     next();
   }
-};
+});
 
 // authenticate 
 const authenticate = asyncHandler(async (req, res, next) => {

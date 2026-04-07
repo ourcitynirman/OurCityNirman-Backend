@@ -166,6 +166,7 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
             dbOrders.push(newOrder);
         }
     } catch (dbErr) {
+        console.error("DEBUG: Order creation DB error:", dbErr);
         throw new ApiError(500, 'Failed to save orders. Please try again.');
     }
 
