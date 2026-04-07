@@ -1,13 +1,13 @@
 import mongoose from 'mongoose';
 import Order, { calcEstimatedDelivery } from '../../models/Order.model.js';
-import Cart    from '../../models/cart.model.js';
+import Cart from '../../models/cart.model.js';
 import Product from '../../models/Product.js';
 import Address from '../../models/UserAddress.model.js';
 import asyncHandler from '../../utils/asyncHandler.js';
-import ApiError     from '../../utils/ApiError.js';
+import ApiError from '../../utils/ApiError.js';
 import { createAndSendInvoice } from '../../services/invoice.service.js';
 
-const DELIVERY_CHARGE     = 50;
+const DELIVERY_CHARGE = 50;
 const FREE_DELIVERY_ABOVE = 50_000;
 
 const DELIVERY_RATES = {
@@ -18,7 +18,7 @@ const DELIVERY_RATES = {
 
 function calcDeliveryCharge(subtotal, type = 'standard') {
     if (type === 'standard' || !DELIVERY_RATES[type]) {
-       return subtotal >= 50000 ? 0 : 50; 
+        return subtotal >= 50000 ? 0 : 50;
     }
     return DELIVERY_RATES[type];
 }
@@ -37,22 +37,26 @@ export const placeOrder = asyncHandler(async (req, res) => {
     if (!address) throw new ApiError(404, 'Delivery address not found');
 
     const cart = await Cart.findOne({ user: req.user._id }).populate({
-        path:   'items.product',
+        path: 'items.product',
         select: 'name price images category brand quantityAvailable isActive vendorId',
     });
 
     if (!cart || cart.items.length === 0) throw new ApiError(400, 'Your cart is empty');
 
-    const orderItems   = [];
+    const orderItems = [];
     const stockUpdates = [];
-    const categories   = [];
+    const categories = [];
 
     for (const item of cart.items) {
         const product = item.product;
 
-        if (!product)          throw new ApiError(400, 'One or more products in your cart no longer exist');
+        if (!product) throw new ApiError(400, 'One or more products in your cart no longer exist');
         if (!product.isActive) throw new ApiError(400, `Product "${product.name}" is no longer available`);
         if (!product.vendorId) throw new ApiError(400, `Vendor not found for "${product.name}"`);
+
+        if (product.vendorId.toString() === req.user._id.toString()) {
+            throw new ApiError(400, `You cannot purchase your own product: "${product.name}"`);
+        }
 
         if (!Number.isInteger(item.quantity) || item.quantity < 1) {
             throw new ApiError(400, `Invalid quantity for "${product.name}"`);
@@ -66,16 +70,16 @@ export const placeOrder = asyncHandler(async (req, res) => {
         }
 
         orderItems.push({
-            product:  product._id,
-            vendor:   product.vendorId,
+            product: product._id,
+            vendor: product.vendorId,
             productSnapshot: {
-                name:     product.name,
-                image:    product.images?.[0] ?? null,
+                name: product.name,
+                image: product.images?.[0] ?? null,
                 category: product.category,
-                brand:    product.brand,
+                brand: product.brand,
             },
-            quantity:   item.quantity,
-            price:      product.price,
+            quantity: item.quantity,
+            price: product.price,
             totalPrice: product.price * item.quantity,
             itemStatus: 'pending',
         });
@@ -93,7 +97,7 @@ export const placeOrder = asyncHandler(async (req, res) => {
 
     const totalSubtotal = orderItems.reduce((sum, i) => sum + i.totalPrice, 0);
     const totalDeliveryCharge = calcDeliveryCharge(totalSubtotal, deliveryType);
-    
+
     // adjust estimated delivery based on deliveryType
     let estimatedDelivery = calcEstimatedDelivery(categories);
     if (deliveryType === 'same_day') {
@@ -106,15 +110,15 @@ export const placeOrder = asyncHandler(async (req, res) => {
 
     const deliveryAddress = {
         fullName: address.fullName,
-        phone:    address.phone,
-        line1:    address.line1,
-        line2:    address.line2    ?? null,
-        village:  address.village  ?? null,
+        phone: address.phone,
+        line1: address.line1,
+        line2: address.line2 ?? null,
+        village: address.village ?? null,
         landmark: address.landmark ?? null,
-        city:     address.city,
-        state:    address.state,
-        pincode:  address.pincode,
-        country:  address.country  ?? 'India',
+        city: address.city,
+        state: address.state,
+        pincode: address.pincode,
+        country: address.country ?? 'India',
     };
 
     const session = await mongoose.startSession();
@@ -122,47 +126,47 @@ export const placeOrder = asyncHandler(async (req, res) => {
 
     try {
         await session.withTransaction(async () => {
-             const vendorIds = Object.keys(itemsByVendor);
-             let allocatedDeliveryCharge = 0;
+            const vendorIds = Object.keys(itemsByVendor);
+            let allocatedDeliveryCharge = 0;
 
-             for (let i = 0; i < vendorIds.length; i++) {
-                 const vId = vendorIds[i];
-                 const vItems = itemsByVendor[vId];
-                 const vSubtotal = vItems.reduce((sum, item) => sum + item.totalPrice, 0);
-                 
-                 let vDeliveryCharge = 0;
-                 if (i === vendorIds.length - 1) {
-                     vDeliveryCharge = Math.max(0, totalDeliveryCharge - allocatedDeliveryCharge);
-                 } else {
-                     vDeliveryCharge = Math.round((vSubtotal / totalSubtotal) * totalDeliveryCharge * 100) / 100;
-                     allocatedDeliveryCharge += vDeliveryCharge;
-                 }
+            for (let i = 0; i < vendorIds.length; i++) {
+                const vId = vendorIds[i];
+                const vItems = itemsByVendor[vId];
+                const vSubtotal = vItems.reduce((sum, item) => sum + item.totalPrice, 0);
 
-                 const vTotalAmount = Math.round((vSubtotal + vDeliveryCharge) * 100) / 100;
+                let vDeliveryCharge = 0;
+                if (i === vendorIds.length - 1) {
+                    vDeliveryCharge = Math.max(0, totalDeliveryCharge - allocatedDeliveryCharge);
+                } else {
+                    vDeliveryCharge = Math.round((vSubtotal / totalSubtotal) * totalDeliveryCharge * 100) / 100;
+                    allocatedDeliveryCharge += vDeliveryCharge;
+                }
 
-                 const [newOrder] = await Order.create(
-                     [{
-                         user: req.user._id,
-                         items: vItems,
-                         deliveryAddress,
-                         subtotal: vSubtotal,
-                         deliveryType,
-                         deliveryCharge: vDeliveryCharge,
-                         totalAmount: vTotalAmount,
-                         paymentMethod,
-                         paymentStatus: 'pending',
-                         estimatedDelivery,
-                         notes: notes ?? null,
-                         statusHistory: [{
-                             status:    'placed',
-                             changedBy: 'user',
-                             note:      'Order placed successfully',
-                         }],
-                     }],
-                     { session }
-                 );
-                 createdOrders.push(newOrder);
-             }
+                const vTotalAmount = Math.round((vSubtotal + vDeliveryCharge) * 100) / 100;
+
+                const [newOrder] = await Order.create(
+                    [{
+                        user: req.user._id,
+                        items: vItems,
+                        deliveryAddress,
+                        subtotal: vSubtotal,
+                        deliveryType,
+                        deliveryCharge: vDeliveryCharge,
+                        totalAmount: vTotalAmount,
+                        paymentMethod,
+                        paymentStatus: 'pending',
+                        estimatedDelivery,
+                        notes: notes ?? null,
+                        statusHistory: [{
+                            status: 'placed',
+                            changedBy: 'user',
+                            note: 'Order placed successfully',
+                        }],
+                    }],
+                    { session }
+                );
+                createdOrders.push(newOrder);
+            }
 
             await Promise.all(
                 stockUpdates.map(({ id, quantity }) =>
@@ -206,11 +210,11 @@ export const placeOrder = asyncHandler(async (req, res) => {
 export const getMyOrders = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, status } = req.query;
 
-    const pageNum  = Math.max(1, parseInt(page));
+    const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(50, Math.max(1, parseInt(limit)));
 
     const orders = await Order.getUserOrders(req.user._id, { page: pageNum, limit: limitNum, status });
-    const total  = await Order.countDocuments({
+    const total = await Order.countDocuments({
         user: req.user._id,
         ...(status ? { status } : {}),
     });
@@ -227,24 +231,21 @@ export const getMyOrders = asyncHandler(async (req, res) => {
 export const getOrderById = asyncHandler(async (req, res) => {
     const order = await Order.findById(req.params.orderId)
         .populate('items.product', 'name price images slug')
-        .lean({ virtuals: true }); 
+        .lean({ virtuals: true });
 
     if (!order) throw new ApiError(404, 'Order not found');
 
-    if (req.user.role === 'user') {
-        if (order.user.toString() !== req.user._id.toString()) {
-            throw new ApiError(403, 'Access denied');
-        }
+    const isOwner = order.user?.toString() === req.user._id?.toString();
+    const isAdmin = req.user.role === 'admin';
+    const isSeller = req.user.role === 'vendor' && order.items.some(
+        (item) => item.vendor?.toString() === req.user._id?.toString()
+    );
+
+    if (isOwner || isAdmin || isSeller) {
+        return res.status(200).json({ success: true, data: { order } });
     }
 
-    if (req.user.role === 'vendor') {
-        const hasItem = order.items.some(
-            (item) => item.vendor.toString() === req.user._id.toString()
-        );
-        if (!hasItem) throw new ApiError(403, 'Access denied');
-    }
-
-    res.status(200).json({ success: true, data: { order } });
+    throw new ApiError(403, 'Access denied');
 });
 
 export const getOrderHistory = asyncHandler(async (req, res) => {
@@ -264,13 +265,13 @@ export const getOrderHistory = asyncHandler(async (req, res) => {
     res.status(200).json({
         success: true,
         data: {
-            orderNumber:       order.orderNumber,
-            currentStatus:     order.status,
+            orderNumber: order.orderNumber,
+            currentStatus: order.status,
             estimatedDelivery: order.estimatedDelivery,
-            deliveredAt:       order.deliveredAt,
-            isOverdue:         order.isOverdue,
-            overdueByDays:     order.overdueByDays,
-            timeline:          order.statusHistory,
+            deliveredAt: order.deliveredAt,
+            isOverdue: order.isOverdue,
+            overdueByDays: order.overdueByDays,
+            timeline: order.statusHistory,
         },
     });
 });
@@ -336,7 +337,7 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
     }
 
     const order = await Order.findOne({
-        _id:            req.params.orderId,
+        _id: req.params.orderId,
         'items.vendor': req.user._id,
     });
 
@@ -366,9 +367,9 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
 export const getVendorOrders = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, status } = req.query;
 
-    const pageNum  = Math.max(1, parseInt(page));
+    const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(50, Math.max(1, parseInt(limit)));
-    const skip     = (pageNum - 1) * limitNum;
+    const skip = (pageNum - 1) * limitNum;
 
     const matchStage = { 'items.vendor': new mongoose.Types.ObjectId(req.user._id) };
     if (status) matchStage.status = status;
@@ -380,8 +381,8 @@ export const getVendorOrders = asyncHandler(async (req, res) => {
                 items: {
                     $filter: {
                         input: '$$ROOT.items',
-                        as:    'item',
-                        cond:  { $eq: ['$$item.vendor', new mongoose.Types.ObjectId(req.user._id)] },
+                        as: 'item',
+                        cond: { $eq: ['$$item.vendor', new mongoose.Types.ObjectId(req.user._id)] },
                     },
                 },
             },
@@ -420,15 +421,15 @@ export const getVendorOrders = asyncHandler(async (req, res) => {
         { $sort: { isOverdue: -1, createdAt: -1 } },
         {
             $facet: {
-                data:  [{ $skip: skip }, { $limit: limitNum }],
+                data: [{ $skip: skip }, { $limit: limitNum }],
                 total: [{ $count: 'count' }],
             },
         },
     ];
 
     const result = await Order.aggregate(pipeline);
-    const orders = result[0]?.data            || [];
-    const total  = result[0]?.total?.[0]?.count || 0;
+    const orders = result[0]?.data || [];
+    const total = result[0]?.total?.[0]?.count || 0;
 
     res.status(200).json({
         success: true,
@@ -459,9 +460,9 @@ export const updateItemTracking = asyncHandler(async (req, res) => {
         throw new ApiError(403, 'You can only update your own items');
     }
 
-    if (trackingNumber)  item.trackingNumber  = trackingNumber;
-    if (shippingCarrier) item.shippingCarrier  = shippingCarrier;
-    if (itemStatus)      item.itemStatus       = itemStatus;
+    if (trackingNumber) item.trackingNumber = trackingNumber;
+    if (shippingCarrier) item.shippingCarrier = shippingCarrier;
+    if (itemStatus) item.itemStatus = itemStatus;
 
     const allShipped = order.items.every(
         (i) => ['shipped', 'out_for_delivery', 'delivered', 'cancelled'].includes(i.itemStatus)
@@ -479,9 +480,9 @@ export const updateItemTracking = asyncHandler(async (req, res) => {
 export const adminGetAllOrders = asyncHandler(async (req, res) => {
     const { page = 1, limit = 20, status, search, overdueOnly } = req.query;
 
-    const pageNum  = Math.max(1, parseInt(page));
+    const pageNum = Math.max(1, parseInt(page));
     const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
-    const skip     = (pageNum - 1) * limitNum;
+    const skip = (pageNum - 1) * limitNum;
 
     const filter = {};
     if (status) filter.status = status;
@@ -527,16 +528,16 @@ export const adminCancelOrder = asyncHandler(async (req, res) => {
 
     try {
         await session.withTransaction(async () => {
-            order.status       = 'cancelled';
+            order.status = 'cancelled';
             order.cancelReason = reason;
-            order.cancelledBy  = 'admin';
-            order.cancelledAt  = new Date();
-            order.adminNotes   = `Admin override by ${req.user._id}: ${reason}`;
+            order.cancelledBy = 'admin';
+            order.cancelledAt = new Date();
+            order.adminNotes = `Admin override by ${req.user._id}: ${reason}`;
 
             order.statusHistory.push({
-                status:    'cancelled',
+                status: 'cancelled',
                 changedBy: 'admin',
-                note:      reason,
+                note: reason,
             });
 
             await order.save({ session });

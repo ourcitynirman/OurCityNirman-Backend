@@ -49,6 +49,9 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
         if (!product.vendorId) {
             throw new ApiError(400, `Vendor not found for "${product.name}"`);
         }
+        if (product.vendorId.toString() === req.user._id.toString()) {
+            throw new ApiError(400, `You cannot purchase your own product: "${product.name}"`);
+        }
         if (!Number.isInteger(item.quantity) || item.quantity < 1) {
             throw new ApiError(400, `Invalid quantity for "${product.name}"`);
         }
