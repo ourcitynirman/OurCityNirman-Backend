@@ -183,7 +183,7 @@ productSchema.index({ category: 1, brand: 1 });
 
 
 
-productSchema.pre('save', function (next) {
+productSchema.pre('save', function () {
   if (this.originalPrice && this.price && !this.discount) {
     this.discount = Math.round(((this.originalPrice - this.price) / this.originalPrice) * 100);
   }
@@ -204,8 +204,6 @@ productSchema.pre('save', function (next) {
       .replace(/-+/g, '-')
       .trim() + '-' + Date.now() + '-' + randomSuffix;
   }
-
-  next();
 });
 
 

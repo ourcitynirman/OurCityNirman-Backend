@@ -54,13 +54,12 @@ const cartSchema = new mongoose.Schema(
     }
 );
 
-cartSchema.pre('save', function (next) {
+cartSchema.pre('save', function () {
     this.totalItems = this.items.reduce((sum, item) => sum + item.quantity, 0);
     this.totalPrice =
         Math.round(
             this.items.reduce((sum, item) => sum + item.price * item.quantity, 0) * 100
         ) / 100;
-    next();
 });
 
 const PRODUCT_FIELDS =

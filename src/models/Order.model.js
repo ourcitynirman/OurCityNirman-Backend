@@ -195,7 +195,7 @@ orderSchema.index({ 'items.vendor': 1, createdAt: -1 });
 orderSchema.index({ status: 1, createdAt: -1 });
 orderSchema.index({ estimatedDelivery: 1, status: 1 }); 
 
-orderSchema.pre('save', function (next) {
+orderSchema.pre('save', function () {
     if (!this.orderNumber) {
         this.orderNumber = 'ORD-' + nanoid(10).toUpperCase();
     }
@@ -211,8 +211,6 @@ orderSchema.pre('save', function (next) {
             note:      null,
         });
     }
-
-    next();
 });
 
 

@@ -15,6 +15,7 @@ import {
 } from '../../services/Delivery.otp.service.js';
 import Order from '../../models/Order.model.js';
 import ApiError from '../../utils/ApiError.js';
+import asyncHandler from '../../utils/asyncHandler.js';
 
 const VendorOrderrouter = Router();
 
