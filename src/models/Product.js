@@ -154,6 +154,15 @@ const productSchema = new mongoose.Schema({
     type: String,
     unique: true,
     index: true
+  },
+  hsn: {
+    type: String,
+    trim: true,
+    default: "0000"
+  },
+  igstRate: {
+    type: Number,
+    default: 18
   }
 }, {
   timestamps: true,

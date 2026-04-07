@@ -2,15 +2,25 @@ import express from "express"
 import cors from "cors"
 import cookieParser from "cookie-parser"
 import helmet from "helmet"
-
+import morgan from "morgan"
+import rateLimit from "express-rate-limit"
 import dotenv from 'dotenv';
 dotenv.config();
 
-// dotenv.config({ path: "/var/www/OurCityNirman/OurCityNirman-Backend/.env" });
-
-// console.log("CORS_ORIGIN =", process.env.CORS_ORIGIN);
-
 const app = express()
+
+// ─── LOGGING (Morgan) 
+app.use(morgan("dev"));
+
+// ─── RATE LIMITING (Security)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: "Too many requests from this IP, please try again after 15 minutes",
+});
+app.use("/api/", limiter); // Apply to all API routes
 // app.set('trust proxy', 1); # rate limit proxy issue
 
 // const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN || "http://localhost:5174")
@@ -102,6 +112,7 @@ import SearchRoute from "./routes/Products/search.route.js";
 import OrderRouter from "./routes/order/Order.routes.js";
 import VendorOrderrouter from "./routes/vendor/Vendor.order.routes.js";
 import SliderRoute from "./routes/homeslider/homeslider.route.js";
+import InvoiceRouter from "./routes/invoice/invoice.route.js";
 import errorHandler from './middlewares/Errorhandler.middleware.js';
 
 app.use("/api/v1/auth", auth)
@@ -130,6 +141,7 @@ app.use("/api/v1/reviews", reviewRoute)
 // admin  routes
 app.use("/api/v1/admin", AdminRouter)
 app.use("/api/v1/slider", SliderRoute)
+app.use("/api/v1/invoice", InvoiceRouter)
 
 app.use(errorHandler);
 

@@ -19,15 +19,16 @@ port: Number(process.env.EMAIL_PORT),
 },
 });
 
-export const sendMail = async ({ to, subject, html }) => {
+export const sendMail = async ({ to, subject, html, attachments = [] }) => {
   if (!to) {
     throw new Error("Recipient email (to) is required");
   }
 
   return await transporter.sendMail({
-   from: process.env.EMAIL_FROM,
+    from: process.env.EMAIL_FROM,
     to,
     subject,
     html,
+    attachments, 
   });
 };

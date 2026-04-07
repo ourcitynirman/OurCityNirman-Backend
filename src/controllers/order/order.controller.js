@@ -5,6 +5,7 @@ import Product from '../../models/Product.js';
 import Address from '../../models/UserAddress.model.js';
 import asyncHandler from '../../utils/asyncHandler.js';
 import ApiError     from '../../utils/ApiError.js';
+import { createAndSendInvoice } from '../../services/invoice.service.js';
 
 const DELIVERY_CHARGE     = 50;
 const FREE_DELIVERY_ABOVE = 50_000;
@@ -83,9 +84,15 @@ export const placeOrder = asyncHandler(async (req, res) => {
         if (product.category) categories.push(product.category);
     }
 
-    const subtotal          = orderItems.reduce((sum, i) => sum + i.totalPrice, 0);
-    const deliveryCharge    = calcDeliveryCharge(subtotal, deliveryType);
-    const totalAmount       = Math.round((subtotal + deliveryCharge) * 100) / 100;
+    const itemsByVendor = {};
+    for (const item of orderItems) {
+        const vId = item.vendor.toString();
+        if (!itemsByVendor[vId]) itemsByVendor[vId] = [];
+        itemsByVendor[vId].push(item);
+    }
+
+    const totalSubtotal = orderItems.reduce((sum, i) => sum + i.totalPrice, 0);
+    const totalDeliveryCharge = calcDeliveryCharge(totalSubtotal, deliveryType);
     
     // adjust estimated delivery based on deliveryType
     let estimatedDelivery = calcEstimatedDelivery(categories);
@@ -111,32 +118,51 @@ export const placeOrder = asyncHandler(async (req, res) => {
     };
 
     const session = await mongoose.startSession();
-    let order;
+    const createdOrders = [];
 
     try {
         await session.withTransaction(async () => {
-            const created = await Order.create(
-                [{
-                    user: req.user._id,
-                    items: orderItems,
-                    deliveryAddress,
-                    subtotal,
-                    deliveryType,
-                    deliveryCharge,
-                    totalAmount,
-                    paymentMethod,
-                    paymentStatus: paymentMethod === 'cod' ? 'pending' : 'paid',
-                    estimatedDelivery,
-                    notes: notes ?? null,
-                    statusHistory: [{
-                        status:    'placed',
-                        changedBy: 'user',
-                        note:      'Order placed successfully',
-                    }],
-                }],
-                { session }
-            );
-            order = created[0];
+             const vendorIds = Object.keys(itemsByVendor);
+             let allocatedDeliveryCharge = 0;
+
+             for (let i = 0; i < vendorIds.length; i++) {
+                 const vId = vendorIds[i];
+                 const vItems = itemsByVendor[vId];
+                 const vSubtotal = vItems.reduce((sum, item) => sum + item.totalPrice, 0);
+                 
+                 let vDeliveryCharge = 0;
+                 if (i === vendorIds.length - 1) {
+                     vDeliveryCharge = Math.max(0, totalDeliveryCharge - allocatedDeliveryCharge);
+                 } else {
+                     vDeliveryCharge = Math.round((vSubtotal / totalSubtotal) * totalDeliveryCharge * 100) / 100;
+                     allocatedDeliveryCharge += vDeliveryCharge;
+                 }
+
+                 const vTotalAmount = Math.round((vSubtotal + vDeliveryCharge) * 100) / 100;
+
+                 const [newOrder] = await Order.create(
+                     [{
+                         user: req.user._id,
+                         items: vItems,
+                         deliveryAddress,
+                         subtotal: vSubtotal,
+                         deliveryType,
+                         deliveryCharge: vDeliveryCharge,
+                         totalAmount: vTotalAmount,
+                         paymentMethod,
+                         paymentStatus: 'pending',
+                         estimatedDelivery,
+                         notes: notes ?? null,
+                         statusHistory: [{
+                             status:    'placed',
+                             changedBy: 'user',
+                             note:      'Order placed successfully',
+                         }],
+                     }],
+                     { session }
+                 );
+                 createdOrders.push(newOrder);
+             }
 
             await Promise.all(
                 stockUpdates.map(({ id, quantity }) =>
@@ -158,13 +184,20 @@ export const placeOrder = asyncHandler(async (req, res) => {
         session.endSession();
     }
 
-    if (!order) throw new ApiError(500, 'Order creation failed. Please try again.');
+    if (createdOrders.length === 0) throw new ApiError(500, 'Order creation failed. Please try again.');
+
+    // Generate and send invoices for all orders (non-blocking)
+    createdOrders.forEach(order => {
+        createAndSendInvoice(order, req.user)
+            .catch(err => console.error(`Post-placement invoice job failed for ${order.orderNumber}:`, err));
+    });
 
     res.status(201).json({
         success: true,
         message: 'Order placed successfully',
         data: {
-            order,
+            orders: createdOrders,
+            orderNumber: createdOrders.map(o => o.orderNumber).join(', '),
             estimatedDelivery,
         },
     });

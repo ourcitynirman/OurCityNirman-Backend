@@ -107,7 +107,33 @@ const deleteFromCloudinary = async (publicId, debug = false) => {
 };
 
 
+
+const uploadStream = (fileBuffer, resourceType = "auto") => {
+    return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+            { resource_type: resourceType },
+            (error, result) => {
+                if (result) {
+                    resolve({
+                        success: true,
+                        url: result.secure_url,
+                        public_id: result.public_id,
+                        raw: result
+                    });
+                } else {
+                    reject({
+                        success: false,
+                        error: error.message
+                    });
+                }
+            }
+        );
+        stream.end(fileBuffer);
+    });
+};
+
 export {
     uploadOnCloudinary,
-    deleteFromCloudinary
+    deleteFromCloudinary,
+    uploadStream
 };

@@ -8,6 +8,7 @@ import Product from '../../models/Product.js';
 import Address from '../../models/UserAddress.model.js';
 import asyncHandler from '../../utils/asyncHandler.js';
 import ApiError from '../../utils/ApiError.js';
+import { createAndSendInvoice } from '../../services/invoice.service.js';
 
 const DELIVERY_RATES = {
     standard: 0,
@@ -76,9 +77,16 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
         if (product.category) categories.push(product.category);
     }
 
-    const subtotal = orderItems.reduce((sum, i) => sum + i.totalPrice, 0);
-    const deliveryCharge = calcDeliveryCharge(subtotal, deliveryType);
-    const totalAmount = Math.round((subtotal + deliveryCharge) * 100) / 100;
+    const itemsByVendor = {};
+    for (const item of orderItems) {
+        const vId = item.vendor.toString();
+        if (!itemsByVendor[vId]) itemsByVendor[vId] = [];
+        itemsByVendor[vId].push(item);
+    }
+
+    const totalSubtotal = orderItems.reduce((sum, i) => sum + i.totalPrice, 0);
+    const totalDeliveryCharge = calcDeliveryCharge(totalSubtotal, deliveryType);
+    const totalAmount = Math.round((totalSubtotal + totalDeliveryCharge) * 100) / 100;
     
     // adjust estimated delivery based on deliveryType
     let estimatedDelivery = calcEstimatedDelivery(categories);
@@ -117,28 +125,48 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
         throw new ApiError(502, 'Razorpay order creation failed. Check your API keys.');
     }
 
-    let dbOrder;
+    const dbOrders = [];
     try {
-        dbOrder = await Order.create({
-            user: req.user._id,
-            items: orderItems,
-            deliveryAddress,
-            subtotal,
-            deliveryType,
-            deliveryCharge,
-            totalAmount,
-            paymentMethod: 'online',
-            paymentStatus: 'pending',
-            estimatedDelivery,
-            razorpayOrderId: rzpOrder.id,
-            statusHistory: [{
-                status: 'placed',
-                changedBy: 'user',
-                note: 'Awaiting payment',
-            }],
-        });
+        const vendorIds = Object.keys(itemsByVendor);
+        let allocatedDeliveryCharge = 0;
+
+        for (let i = 0; i < vendorIds.length; i++) {
+            const vId = vendorIds[i];
+            const vItems = itemsByVendor[vId];
+            const vSubtotal = vItems.reduce((sum, item) => sum + item.totalPrice, 0);
+            
+            let vDeliveryCharge = 0;
+            if (i === vendorIds.length - 1) {
+                vDeliveryCharge = Math.max(0, totalDeliveryCharge - allocatedDeliveryCharge);
+            } else {
+                vDeliveryCharge = Math.round((vSubtotal / totalSubtotal) * totalDeliveryCharge * 100) / 100;
+                allocatedDeliveryCharge += vDeliveryCharge;
+            }
+
+            const vTotalAmount = Math.round((vSubtotal + vDeliveryCharge) * 100) / 100;
+
+            const newOrder = await Order.create({
+                user: req.user._id,
+                items: vItems,
+                deliveryAddress,
+                subtotal: vSubtotal,
+                deliveryType,
+                deliveryCharge: vDeliveryCharge,
+                totalAmount: vTotalAmount,
+                paymentMethod: 'online',
+                paymentStatus: 'pending',
+                estimatedDelivery,
+                razorpayOrderId: rzpOrder.id,
+                statusHistory: [{
+                    status: 'placed',
+                    changedBy: 'user',
+                    note: 'Awaiting payment',
+                }],
+            });
+            dbOrders.push(newOrder);
+        }
     } catch (dbErr) {
-        throw new ApiError(500, 'Failed to save order. Please try again.');
+        throw new ApiError(500, 'Failed to save orders. Please try again.');
     }
 
 
@@ -146,7 +174,7 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
         success: true,
         data: {
             razorpayOrderId: rzpOrder.id,
-            dbOrderId: dbOrder._id,
+            dbOrderId: dbOrders[0]._id, // Returning the first for backward compatibility if needed, but the important one is razorpayOrderId
             amount: amountInPaise,
         },
     });
@@ -165,16 +193,14 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Payment verification data incomplete');
     }
 
-    const order = await Order.findOne({
-        _id: dbOrderId,
+    const orders = await Order.find({
+        razorpayOrderId: razorpay_order_id,
         user: req.user._id,
         paymentStatus: 'pending',
     });
 
-    if (!order) throw new ApiError(404, 'Order not found or already processed');
-
-    if (order.razorpayOrderId !== razorpay_order_id) {
-        throw new ApiError(400, 'Payment verification failed. Order mismatch.');
+    if (!orders || orders.length === 0) {
+        throw new ApiError(404, 'No pending orders found for this payment');
     }
 
     const expectedSignature = crypto
@@ -183,38 +209,46 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
         .digest('hex');
 
     if (expectedSignature !== razorpay_signature) {
-        order.paymentStatus = 'failed';
-        order.statusHistory.push({
-            status: 'cancelled',
-            changedBy: 'system',
-            note: 'Payment signature verification failed',
-        });
-        await order.save();
+        await Order.updateMany(
+            { razorpayOrderId: razorpay_order_id },
+            { 
+                $set: { paymentStatus: 'failed' },
+                $push: { 
+                    statusHistory: {
+                        status: 'cancelled',
+                        changedBy: 'system',
+                        note: 'Payment signature verification failed',
+                    }
+                }
+            }
+        );
         throw new ApiError(400, 'Payment verification failed. Invalid signature.');
     }
 
     const session = await mongoose.startSession();
     try {
         await session.withTransaction(async () => {
-            order.paymentStatus = 'paid';
-            order.razorpayPaymentId = razorpay_payment_id;
-            order.status = 'confirmed';
-            order.statusHistory.push({
-                status: 'confirmed',
-                changedBy: 'system',
-                note: `Payment received. ID: ${razorpay_payment_id}`,
-            });
-            await order.save({ session });
+            for(const order of orders) {
+                order.paymentStatus = 'paid';
+                order.razorpayPaymentId = razorpay_payment_id;
+                order.status = 'confirmed';
+                order.statusHistory.push({
+                    status: 'confirmed',
+                    changedBy: 'system',
+                    note: `Payment received. ID: ${razorpay_payment_id}`,
+                });
+                await order.save({ session });
 
-            await Promise.all(
-                order.items.map(({ product, quantity }) =>
-                    Product.findByIdAndUpdate(
-                        product,
-                        { $inc: { quantityAvailable: -quantity } },
-                        { session }
+                await Promise.all(
+                    order.items.map(({ product, quantity }) =>
+                        Product.findByIdAndUpdate(
+                            product,
+                            { $inc: { quantityAvailable: -quantity } },
+                            { session }
+                        )
                     )
-                )
-            );
+                );
+            }
 
             await Cart.findOneAndUpdate(
                 { user: req.user._id },
@@ -227,13 +261,19 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
         session.endSession();
     }
 
+    // Generate and send invoices for all orders (non-blocking)
+    orders.forEach(order => {
+        createAndSendInvoice(order, req.user)
+            .catch(err => console.error(`Post-payment invoice job failed for ${order.orderNumber}:`, err));
+    });
+
     return res.status(200).json({
         success: true,
         message: 'Payment verified. Order confirmed.',
         data: {
-            orderId: order._id,
-            orderNumber: order.orderNumber,
-            estimatedDelivery: order.estimatedDelivery,
+            orders: orders,
+            orderNumber: orders.map(o => o.orderNumber).join(', '),
+            estimatedDelivery: orders[0]?.estimatedDelivery,
         },
     });
 });
