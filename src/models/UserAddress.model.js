@@ -142,17 +142,12 @@ addressSchema.virtual('fullAddress').get(function () {
 
 
 
-addressSchema.pre('save', async function (next) {
-    try {
-        if (this.isDefault && this.isModified('isDefault')) {
-            await this.constructor.updateMany(
-                { user: this.user, _id: { $ne: this._id } },
-                { $set: { isDefault: false } }
-            );
-        }
-        next();
-    } catch (err) {
-        next(err);
+addressSchema.pre('save', async function () {
+    if (this.isDefault && this.isModified('isDefault')) {
+        await this.constructor.updateMany(
+            { user: this.user, _id: { $ne: this._id } },
+            { $set: { isDefault: false } }
+        );
     }
 });
 
