@@ -9,6 +9,8 @@ dotenv.config();
 
 const app = express()
 
+app.set('trust proxy', 1); // Enable trusting proxy (useful for Nginx/Cloudflare)
+
 // ─── LOGGING (Morgan) 
 app.use(morgan("dev"));
 
@@ -21,7 +23,6 @@ const limiter = rateLimit({
   message: "Too many requests from this IP, please try again after 15 minutes",
 });
 app.use("/api/", limiter); // Apply to all API routes
-// app.set('trust proxy', 1); # rate limit proxy issue
 
 // const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN || "http://localhost:5174")
 //   .split(",")
