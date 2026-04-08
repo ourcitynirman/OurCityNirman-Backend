@@ -21,7 +21,7 @@ const limiter = rateLimit({
   message: "Too many requests from this IP, please try again after 15 minutes",
 });
 app.use("/api/", limiter); // Apply to all API routes
-app.set('trust proxy', 1); // Enable trusting proxy (useful for Nginx/Cloudflare)
+// app.set('trust proxy', 1); # rate limit proxy issue
 
 // const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN || "http://localhost:5174")
 //   .split(",")
@@ -61,42 +61,43 @@ app.use(
     contentSecurityPolicy: isDev
       ? false  // CSP disabled in development — no issues will occur
       : {
-          directives: {
-            defaultSrc: ["'self'"],
-            frameSrc: [
-              "'self'",
-              "https://*.razorpay.com",
-              "https://api.razorpay.com",
-              "https://checkout.razorpay.com",
-              "https://www.google.com",
-              "https://maps.google.com",
-              "https://*.google.com",
-            ],
-            scriptSrc: [
-              "'self'",
-              "'unsafe-inline'",
-              "https://checkout.razorpay.com",
-            ],
-            connectSrc: [
-              "'self'",
-              "https://*.razorpay.com",
-              "https://api.razorpay.com",
-            ],
-            imgSrc: [
-              "'self'",
-              "data:",
-              "https://*.razorpay.com",
-              "https://res.cloudinary.com", // if using Cloudinary
-            ],
-            styleSrc: ["'self'", "'unsafe-inline'"],
-          },
+        directives: {
+          defaultSrc: ["'self'"],
+          frameSrc: [
+            "'self'",
+            "https://*.razorpay.com",
+            "https://api.razorpay.com",
+            "https://checkout.razorpay.com",
+            "https://www.google.com",
+            "https://maps.google.com",
+            "https://*.google.com",
+          ],
+          scriptSrc: [
+            "'self'",
+            "'unsafe-inline'",
+            "https://checkout.razorpay.com",
+          ],
+          connectSrc: [
+            "'self'",
+            "https://*.razorpay.com",
+            "https://api.razorpay.com",
+          ],
+          imgSrc: [
+            "'self'",
+            "data:",
+            "https://*.razorpay.com",
+            "https://res.cloudinary.com", // if using Cloudinary
+          ],
+          styleSrc: ["'self'", "'unsafe-inline'"],
         },
+      },
   })
 );
 
 // ─── BODY PARSERS 
 app.use(express.json({ limit: "16kb" }))
 app.use(express.urlencoded({ extended: true, limit: "16kb" }))
+app.use(cookieParser())
 app.use(express.static("public"))
 
 // ─── ROUTES IMPORT 
