@@ -97,9 +97,9 @@ export const createAndSendInvoice = async (order, user) => {
             },
             items: enrichedItems,
             subtotal,
-            deliveryCharge: order.deliveryCharge || 0,
+            deliveryCharge: Math.round(order.deliveryCharge || 0),
             totalTax,
-            grandTotal: order.totalAmount,
+            grandTotal: Math.round(order.totalAmount),
             paymentMethod: order.paymentMethod,
             razorpayPaymentId: order.razorpayPaymentId
         };

@@ -89,7 +89,7 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
 
     const totalSubtotal = orderItems.reduce((sum, i) => sum + i.totalPrice, 0);
     const totalDeliveryCharge = calcDeliveryCharge(totalSubtotal, deliveryType);
-    const totalAmount = Math.round((totalSubtotal + totalDeliveryCharge) * 100) / 100;
+    const totalAmount = Math.round(totalSubtotal + totalDeliveryCharge);
     
     // adjust estimated delivery based on deliveryType
     let estimatedDelivery = calcEstimatedDelivery(categories);
@@ -142,11 +142,11 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
             if (i === vendorIds.length - 1) {
                 vDeliveryCharge = Math.max(0, totalDeliveryCharge - allocatedDeliveryCharge);
             } else {
-                vDeliveryCharge = Math.round((vSubtotal / totalSubtotal) * totalDeliveryCharge * 100) / 100;
+                vDeliveryCharge = Math.round((vSubtotal / totalSubtotal) * totalDeliveryCharge);
                 allocatedDeliveryCharge += vDeliveryCharge;
             }
 
-            const vTotalAmount = Math.round((vSubtotal + vDeliveryCharge) * 100) / 100;
+            const vTotalAmount = Math.round(vSubtotal + vDeliveryCharge);
 
             const newOrder = await Order.create({
                 user: req.user._id,
