@@ -135,7 +135,7 @@ export const createAndSendInvoice = async (order, user) => {
             html: `
                 <div style="font-family: sans-serif; line-height: 1.6; color: #333;">
                     <h2>Thank you for your order!</h2>
-                    <p>Dear ${user.name},</p>
+                    <p>Dear ${user.fullName || 'Customer'},</p>
                     <p>Your payment for order <b>${order.orderNumber}</b> was successful. Please find your GST tax invoice attached to this email.</p>
                     <p>You can also view and download your invoice at any time from your account dashboard on OurCityNirman.</p>
                     <br/>
