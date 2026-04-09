@@ -9,7 +9,7 @@ dotenv.config();
 
 const app = express()
 
-app.set('trust proxy', 1); // Enable trusting proxy (useful for Nginx/Cloudflare)
+app.set('trust proxy', true); // Enable trusting proxy (recommended for Nginx/Cloudflare)
 
 // ─── LOGGING (Morgan) 
 app.use(morgan("dev"));
@@ -17,10 +17,11 @@ app.use(morgan("dev"));
 // ─── RATE LIMITING (Security)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 1000, // 1000 to prevent frequent rate limiting
   standardHeaders: true,
   legacyHeaders: false,
   message: "Too many requests from this IP, please try again after 15 minutes",
+  validate: { xForwardedForHeader: false }, // Suppress the validation warning as 'trust proxy' is already set
 });
 app.use("/api/", limiter); // Apply to all API routes
 
