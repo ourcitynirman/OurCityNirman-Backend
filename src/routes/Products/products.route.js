@@ -40,7 +40,14 @@ import {
 import { authorize, verifyJWT, optionalJWT } from "../../middlewares/auth.middleware.js";
 import { upload } from '../../middlewares/multer.middleware.js';
 
-const r = (windowMs, max, message) => rateLimit({ windowMs, max, standardHeaders: true, legacyHeaders: false, message: { success: false, message } });
+const r = (windowMs, max, message) => rateLimit({ 
+  windowMs, 
+  max, 
+  standardHeaders: true, 
+  legacyHeaders: false, 
+  message: { success: false, message },
+  validate: { xForwardedForHeader: false }
+});
 
 const publicLimiter = r(15 * 60 * 1000, 100, 'Too many requests');
 const searchLimiter = r(60 * 1000, 20, 'Too many search requests');

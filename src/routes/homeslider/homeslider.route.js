@@ -22,12 +22,14 @@ const publicLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
     message: { success: false, message: 'Too many requests' },
+    validate: { xForwardedForHeader: false },
 });
 
 const adminWriteLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 50,
     message: { success: false, message: 'Too many write requests' },
+    validate: { xForwardedForHeader: false },
 });
 
 const imageUpload = upload.fields([{ name: "image", maxCount: 1 }]);

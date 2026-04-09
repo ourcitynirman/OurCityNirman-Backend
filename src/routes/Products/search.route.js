@@ -20,7 +20,7 @@ const suggestionsLimiter = rateLimit({
     success: false,
     message: 'Too many search requests. Please wait a moment.',
   },
- 
+  validate: { xForwardedForHeader: false },
   skipSuccessfulRequests: false,
 });
 
@@ -32,6 +32,7 @@ const compareLimiter = rateLimit({
     success: false,
     message: 'Too many compare requests. Please wait.',
   },
+  validate: { xForwardedForHeader: false },
 });
 
 
@@ -42,6 +43,7 @@ const recentlyViewedLimiter = rateLimit({
     success: false,
     message: 'Too many requests.',
   },
+  validate: { xForwardedForHeader: false },
 });
 
 
