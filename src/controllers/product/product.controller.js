@@ -10,7 +10,7 @@ const getAllProducts = asyncHandler(async (req, res) => {
     page = 1, limit = 50, sort = '-createdAt',
     category, brand, minPrice, maxPrice,
     minRating, inStock, featured, trending,
-    search, offer, bestFor, vendorId
+    search, offer, bestFor, vendorId, sku
   } = req.query;
 
   const isAdminOrVendor = req.user && ['admin', 'vendor'].includes(req.user.role);
@@ -27,6 +27,7 @@ const getAllProducts = asyncHandler(async (req, res) => {
   if (search) query.$text = { $search: search };
   if (offer === 'true') query.discount = { $gt: 0 };
   if (vendorId) query.vendorId = vendorId;
+  if (sku) query.sku = sku.toUpperCase();
 
   const skip = (Number(page) - 1) * Number(limit);
   const [products, total] = await Promise.all([

@@ -155,6 +155,13 @@ const productSchema = new mongoose.Schema({
     unique: true,
     index: true
   },
+  sku: {
+    type: String,
+    unique: true,
+    index: true,
+    trim: true,
+    uppercase: true
+  },
   hsn: {
     type: String,
     trim: true,
@@ -173,7 +180,7 @@ const productSchema = new mongoose.Schema({
 
 
 
-productSchema.index({ name: 'text', description: 'text', brand: 'text' });
+productSchema.index({ name: 'text', description: 'text', brand: 'text', sku: 'text' });
 productSchema.index({ price: 1 });
 productSchema.index({ rating: -1 });
 productSchema.index({ createdAt: -1 });
@@ -203,6 +210,13 @@ productSchema.pre('save', function () {
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .trim() + '-' + Date.now() + '-' + randomSuffix;
+  }
+
+  if (!this.sku) {
+    const catPrefix = (this.category || 'GEN').substring(0, 3).toUpperCase();
+    const brandPrefix = (this.brand || 'UNK').substring(0, 3).toUpperCase();
+    const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+    this.sku = `${catPrefix}-${brandPrefix}-${randomCode}`;
   }
 });
 
