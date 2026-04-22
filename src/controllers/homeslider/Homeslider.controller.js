@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import HomeSlider from "../../models/Homeslider.model.js";
+import { User } from "../../models/user.model.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../../utils/cloudinary.js";
 import ApiError from "../../utils/ApiError.js";
 import asyncHandler from "../../utils/asyncHandler.js";
@@ -104,7 +105,7 @@ const createSlide = asyncHandler(async (req, res) => {
         buttonText: buttonText?.trim() || "Shop Now",
         link: link?.trim() || "/",
         order: slideOrder,
-        isActive: isActive !== undefined ? isActive === "true" || isActive === true : true,
+        isActive: isActive === "true" || isActive === true,
         duration: parseInt(duration) || 5000,
         createdBy: req.user._id,
         updatedBy: req.user._id,

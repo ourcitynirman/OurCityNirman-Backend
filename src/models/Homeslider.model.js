@@ -103,6 +103,6 @@ homeSliderSchema.methods.toJSON = function () {
     return obj;
 };
 
-const HomeSlider = mongoose.model("HomeSlider", homeSliderSchema);
+const HomeSlider = mongoose.models.HomeSlider || mongoose.model("HomeSlider", homeSliderSchema);
 
 export default HomeSlider;
