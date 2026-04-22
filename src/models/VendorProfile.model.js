@@ -18,7 +18,6 @@ const vendorProfileSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true,
-    index: 'text'
   },
 
   businessType: {

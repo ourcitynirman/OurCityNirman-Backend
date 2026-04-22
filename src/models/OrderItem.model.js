@@ -9,7 +9,6 @@ const orderItemSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Order',
       required: [true, 'Order reference is required'],
-      index: true,
     },
 
     // denormalized for vendor-level queries without joining Order

@@ -13,7 +13,6 @@ const hsnSchema = new mongoose.Schema(
       type: String,
       required: [true, 'HSN code is required'],
       trim: true,
-      index: true,
     },
 
     description: {
