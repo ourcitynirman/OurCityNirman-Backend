@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Order, { calcEstimatedDelivery } from '../../models/Order.model.js';
+import OrderItem from '../../models/OrderItem.model.js';
 import Cart from '../../models/cart.model.js';
 import Product from '../../models/Product.model.js';
 import Address from '../../models/Address.model.js';
@@ -147,7 +148,6 @@ export const placeOrder = asyncHandler(async (req, res) => {
                 const [newOrder] = await Order.create(
                     [{
                         user: req.user._id,
-                        items: vItems,
                         deliveryAddress,
                         subtotal: vSubtotal,
                         deliveryType,
@@ -165,6 +165,23 @@ export const placeOrder = asyncHandler(async (req, res) => {
                     }],
                     { session }
                 );
+
+                // Create OrderItem records
+                await OrderItem.insertMany(
+                    vItems.map(item => ({
+                        order_id: newOrder._id,
+                        user_id: req.user._id,
+                        product: item.product,
+                        vendor: item.vendor,
+                        productSnapshot: item.productSnapshot,
+                        quantity: item.quantity,
+                        price: item.price,
+                        totalPrice: item.totalPrice,
+                        itemStatus: 'pending'
+                    })),
+                    { session }
+                );
+
                 createdOrders.push(newOrder);
             }
 
@@ -235,9 +252,12 @@ export const getOrderById = asyncHandler(async (req, res) => {
 
     if (!order) throw new ApiError(404, 'Order not found');
 
+    const items = await OrderItem.getByOrder(order._id);
+    order.items = items;
+
     const isOwner = order.user?.toString() === req.user._id?.toString();
     const isAdmin = req.user.role === 'admin';
-    const isSeller = req.user.role === 'vendor' && order.items.some(
+    const isSeller = req.user.role === 'vendor' && items.some(
         (item) => item.vendor?.toString() === req.user._id?.toString()
     );
 
@@ -297,14 +317,23 @@ export const cancelOrder = asyncHandler(async (req, res) => {
 
             if (!cancelled) throw new ApiError(400, 'Unable to cancel this order');
 
+            const items = await OrderItem.find({ order_id: order._id }).session(session);
+
             await Promise.all(
-                order.items.map((item) =>
+                items.map((item) =>
                     Product.findByIdAndUpdate(
                         item.product,
                         { $inc: { quantityAvailable: item.quantity } },
                         { session }
                     )
                 )
+            );
+
+            // Cancel all items as well
+            await OrderItem.updateMany(
+                { order_id: order._id },
+                { $set: { itemStatus: 'cancelled', cancelReason: reason, cancelledAt: new Date() } },
+                { session }
             );
         });
     } finally {
@@ -336,12 +365,16 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
         );
     }
 
-    const order = await Order.findOne({
-        _id: req.params.orderId,
-        'items.vendor': req.user._id,
+    const order = await Order.findById(req.params.orderId);
+    if (!order) throw new ApiError(404, 'Order not found');
+
+    // Check if vendor has items in this order
+    const vendorItems = await OrderItem.find({
+        order_id: order._id,
+        vendor: req.user._id
     });
 
-    if (!order) throw new ApiError(404, 'Order not found or access denied');
+    if (vendorItems.length === 0) throw new ApiError(403, 'Access denied. You have no items in this order.');
 
     try {
         await order.updateStatus(status, note || null, 'vendor');
@@ -349,13 +382,11 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
         throw new ApiError(400, err.message);
     }
 
-    order.items.forEach((item) => {
-        if (item.vendor.toString() === req.user._id.toString()) {
-            item.itemStatus = status;
-        }
-    });
-
-    await order.save();
+    // Update individual items belonging to this vendor
+    await OrderItem.updateMany(
+        { order_id: order._id, vendor: req.user._id },
+        { $set: { itemStatus: status } }
+    );
 
     res.status(200).json({
         success: true,
@@ -371,44 +402,42 @@ export const getVendorOrders = asyncHandler(async (req, res) => {
     const limitNum = Math.min(50, Math.max(1, parseInt(limit)));
     const skip = (pageNum - 1) * limitNum;
 
-    const matchStage = { 'items.vendor': new mongoose.Types.ObjectId(req.user._id) };
-    if (status) matchStage.status = status;
+    const matchStage = { vendor: new mongoose.Types.ObjectId(req.user._id) };
+    if (status) matchStage.itemStatus = status;
 
     const pipeline = [
         { $match: matchStage },
         {
-            $addFields: {
-                items: {
-                    $filter: {
-                        input: '$$ROOT.items',
-                        as: 'item',
-                        cond: { $eq: ['$$item.vendor', new mongoose.Types.ObjectId(req.user._id)] },
-                    },
-                },
-            },
+            $lookup: {
+                from: 'orders',
+                localField: 'order_id',
+                foreignField: '_id',
+                as: 'order'
+            }
         },
+        { $unwind: '$order' },
         {
             $addFields: {
                 isOverdue: {
                     $and: [
-                        { $ne: ['$estimatedDelivery', null] },
-                        { $not: [{ $in: ['$status', ['delivered', 'cancelled', 'refunded']] }] },
-                        { $lt: ['$estimatedDelivery', new Date()] },
+                        { $ne: ['$order.estimatedDelivery', null] },
+                        { $not: [{ $in: ['$order.status', ['delivered', 'cancelled', 'refunded']] }] },
+                        { $lt: ['$order.estimatedDelivery', new Date()] },
                     ],
                 },
                 overdueByDays: {
                     $cond: {
                         if: {
                             $and: [
-                                { $ne: ['$estimatedDelivery', null] },
-                                { $not: [{ $in: ['$status', ['delivered', 'cancelled', 'refunded']] }] },
-                                { $lt: ['$estimatedDelivery', new Date()] },
+                                { $ne: ['$order.estimatedDelivery', null] },
+                                { $not: [{ $in: ['$order.status', ['delivered', 'cancelled', 'refunded']] }] },
+                                { $lt: ['$order.estimatedDelivery', new Date()] },
                             ],
                         },
                         then: {
                             $ceil: {
                                 $divide: [
-                                    { $subtract: [new Date(), '$estimatedDelivery'] },
+                                    { $subtract: [new Date(), '$order.estimatedDelivery'] },
                                     1000 * 60 * 60 * 24,
                                 ],
                             },
@@ -427,7 +456,7 @@ export const getVendorOrders = asyncHandler(async (req, res) => {
         },
     ];
 
-    const result = await Order.aggregate(pipeline);
+    const result = await OrderItem.aggregate(pipeline);
     const orders = result[0]?.data || [];
     const total = result[0]?.total?.[0]?.count || 0;
 
@@ -450,11 +479,8 @@ export const updateItemTracking = asyncHandler(async (req, res) => {
         throw new ApiError(400, `itemStatus must be one of: ${VALID_ITEM_STATUSES.join(', ')}`);
     }
 
-    const order = await Order.findById(orderId);
-    if (!order) throw new ApiError(404, 'Order not found');
-
-    const item = order.items.id(itemId);
-    if (!item) throw new ApiError(404, 'Order item not found');
+    const item = await OrderItem.findById(itemId);
+    if (!item || item.order_id.toString() !== orderId) throw new ApiError(404, 'Order item not found');
 
     if (item.vendor.toString() !== req.user._id.toString()) {
         throw new ApiError(403, 'You can only update your own items');
@@ -463,19 +489,22 @@ export const updateItemTracking = asyncHandler(async (req, res) => {
     if (trackingNumber) item.trackingNumber = trackingNumber;
     if (shippingCarrier) item.shippingCarrier = shippingCarrier;
     if (itemStatus) item.itemStatus = itemStatus;
+    await item.save();
 
-    const allShipped = order.items.every(
+    const order = await Order.findById(orderId);
+    const allItems = await OrderItem.find({ order_id: orderId });
+
+    const allShipped = allItems.every(
         (i) => ['shipped', 'out_for_delivery', 'delivered', 'cancelled'].includes(i.itemStatus)
     );
     if (allShipped && order.status === 'processing') {
         order.status = 'shipped';
         order.statusHistory.push({ status: 'shipped', changedBy: 'vendor', note: 'All items shipped' });
+        await order.save();
     }
 
-    await order.save();
-
-    res.status(200).json({ success: true, message: 'Tracking updated', data: { order } });
-});
+    res.status(200).json({ success: true, message: 'Tracking updated', data: { item } });
+},);
 
 export const adminGetAllOrders = asyncHandler(async (req, res) => {
     const { page = 1, limit = 20, status, search, overdueOnly } = req.query;
@@ -542,14 +571,23 @@ export const adminCancelOrder = asyncHandler(async (req, res) => {
 
             await order.save({ session });
 
+            const items = await OrderItem.find({ order_id: order._id }).session(session);
+
             await Promise.all(
-                order.items.map((item) =>
+                items.map((item) =>
                     Product.findByIdAndUpdate(
                         item.product,
                         { $inc: { quantityAvailable: item.quantity } },
                         { session }
                     )
                 )
+            );
+
+            // Also cancel all items
+            await OrderItem.updateMany(
+                { order_id: order._id },
+                { $set: { itemStatus: 'cancelled', cancelReason: reason, cancelledAt: new Date() } },
+                { session }
             );
         });
     } finally {

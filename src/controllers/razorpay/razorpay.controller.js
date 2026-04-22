@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { getRazorpay } from '../../config/razorpay.config.js';
 
 import Order, { calcEstimatedDelivery } from '../../models/Order.model.js';
+import OrderItem from '../../models/OrderItem.model.js';
 import Cart from '../../models/cart.model.js';
 import Product from '../../models/Product.model.js';
 import Address from '../../models/Address.model.js';
@@ -150,7 +151,6 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
 
             const newOrder = await Order.create({
                 user: req.user._id,
-                items: vItems,
                 deliveryAddress,
                 subtotal: vSubtotal,
                 deliveryType,
@@ -166,6 +166,22 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
                     note: 'Awaiting payment',
                 }],
             });
+
+            // Create OrderItem records for this order
+            await OrderItem.insertMany(
+                vItems.map(item => ({
+                    order_id: newOrder._id,
+                    user_id: req.user._id,
+                    product: item.product,
+                    vendor: item.vendor,
+                    productSnapshot: item.productSnapshot,
+                    quantity: item.quantity,
+                    price: item.price,
+                    totalPrice: item.totalPrice,
+                    itemStatus: 'pending'
+                }))
+            );
+
             dbOrders.push(newOrder);
         }
     } catch (dbErr) {
@@ -243,8 +259,11 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
                 });
                 await order.save({ session });
 
+                // Fetch items from OrderItem collection
+                const items = await OrderItem.find({ order_id: order._id }).session(session);
+
                 await Promise.all(
-                    order.items.map(({ product, quantity }) =>
+                    items.map(({ product, quantity }) =>
                         Product.findByIdAndUpdate(
                             product,
                             { $inc: { quantityAvailable: -quantity } },

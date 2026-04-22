@@ -7,6 +7,7 @@ import { uploadStream } from '../utils/cloudinary.js';
 import { sendMail } from './mail.service.js';
 import { generateInvoiceHtml } from '../utils/invoiceTemplate.js';
 import Product from '../models/Product.model.js';
+import OrderItem from '../models/OrderItem.model.js';
 
 /**
  * Service to handle GST Tax Invoice generation and distribution
@@ -14,6 +15,7 @@ import Product from '../models/Product.model.js';
 export const createAndSendInvoice = async (order, user) => {
     try {
         // 1. Prepare Invoice Data
+        const items = await OrderItem.find({ order_id: order._id });
         const invoiceDate = new Date();
         const yy = String(invoiceDate.getFullYear()).slice(-2);
         const mm = String(invoiceDate.getMonth() + 1).padStart(2, '0');
@@ -33,7 +35,7 @@ export const createAndSendInvoice = async (order, user) => {
         const invoiceNumber = `INV-${datePart}-${sequencePart}`;
 
         // Fetch HSN/IGST info from products (as current items only have snippets)
-        const enrichedItems = await Promise.all(order.items.map(async (item) => {
+        const enrichedItems = await Promise.all(items.map(async (item) => {
             const product = await Product.findById(item.product).select('hsn igstRate').populate('hsn');
             
             let hsnObject = product?.hsn;
@@ -85,7 +87,7 @@ export const createAndSendInvoice = async (order, user) => {
             gstin:    process.env.SELLER_GSTIN || "YOUR_GSTIN_HERE"
         };
 
-        const firstVendorId = order.items[0]?.vendor;
+        const firstVendorId = items[0]?.vendor;
         if (firstVendorId) {
             const VendorProfile = (await import('../models/VendorProfile.model.js')).default;
             const vProfile = await VendorProfile.findOne({ userId: firstVendorId });
