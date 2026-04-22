@@ -1,5 +1,7 @@
 import Invoice from "../../models/Invoice.model.js";
+import { User } from "../../models/user.model.js";
 import Order from "../../models/Order.model.js";
+import OrderItem from "../../models/OrderItem.model.js";
 import asyncHandler from "../../utils/asyncHandler.js";
 import ApiError from "../../utils/ApiError.js";
 import ApiResponse from "../../utils/ApiResponse.js";
@@ -36,8 +38,10 @@ export const getInvoiceByOrder = asyncHandler(async (req, res) => {
     if (!order) throw new ApiError(404, "Order not found");
 
     const isPurchaser = order.user.toString() === req.user._id.toString();
-    const isVendor = order.items.some(item => item.vendor.toString() === req.user._id.toString());
     const isAdmin = req.user.role === "admin";
+    
+    // Check vendor access via OrderItem
+    const isVendor = await OrderItem.exists({ order_id: orderId, vendor: req.user._id });
 
     if (!isPurchaser && !isVendor && !isAdmin) {
         throw new ApiError(403, "Access denied to this order's invoice");
@@ -51,7 +55,10 @@ export const getInvoiceByOrder = asyncHandler(async (req, res) => {
             throw new ApiError(404, "Invoice not generated yet");
         }
 
-        const result = await createAndSendInvoice(order, req.user);
+        const customer = await User.findById(order.user);
+        if (!customer) throw new ApiError(404, "Customer not found for this order");
+
+        const result = await createAndSendInvoice(order, customer);
         if (result.success) {
             invoice = result.invoice;
         } else {
@@ -74,8 +81,10 @@ export const downloadInvoice = asyncHandler(async (req, res) => {
     if (!order) throw new ApiError(404, "Ordering information missing");
 
     const isPurchaser = order.user.toString() === req.user._id.toString();
-    const isVendor = order.items.some(item => item.vendor.toString() === req.user._id.toString());
     const isAdmin = req.user.role === "admin";
+    
+    // Check vendor access via OrderItem
+    const isVendor = await OrderItem.exists({ order_id: order._id, vendor: req.user._id });
 
     if (!isPurchaser && !isVendor && !isAdmin) {
         throw new ApiError(403, "Access denied to download this invoice");
@@ -87,7 +96,10 @@ export const downloadInvoice = asyncHandler(async (req, res) => {
             throw new ApiError(404, "Invoice PDF not available");
         }
         
-        const result = await createAndSendInvoice(order, req.user);
+        const customer = await User.findById(order.user);
+        if (!customer) throw new ApiError(404, "Customer not found");
+
+        const result = await createAndSendInvoice(order, customer);
         if (!result.success) throw new ApiError(500, "Failed to regenerate invoice");
         return res.redirect(result.pdfUrl);
     }
@@ -105,8 +117,10 @@ export const viewInvoice = asyncHandler(async (req, res) => {
     if (!order) throw new ApiError(404, "Order info invalid");
 
     const isPurchaser = order.user.toString() === req.user._id.toString();
-    const isVendor = order.items.some(item => item.vendor.toString() === req.user._id.toString());
     const isAdmin = req.user.role === "admin";
+    
+    // Check vendor access via OrderItem
+    const isVendor = await OrderItem.exists({ order_id: order._id, vendor: req.user._id });
 
     if (!isPurchaser && !isVendor && !isAdmin) {
         throw new ApiError(403, "Access denied to view this invoice");
@@ -131,7 +145,10 @@ export const resendInvoiceEmail = asyncHandler(async (req, res) => {
         throw new ApiError(403, "Access denied: Only the purchaser or admin can trigger email resends");
     }
 
-    const result = await createAndSendInvoice(order, req.user);
+    const customer = await User.findById(order.user);
+    if (!customer) throw new ApiError(404, "Customer not found");
+
+    const result = await createAndSendInvoice(order, customer);
 
     if (!result.success) {
         throw new ApiError(500, "Failed to resend invoice");
