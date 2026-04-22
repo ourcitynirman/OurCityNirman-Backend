@@ -51,7 +51,7 @@ export const getCart = asyncHandler(async (req, res, next) => {
 });
 
 export const addToCart = asyncHandler(async (req, res, next) => {
-    const { productId, quantity = 1 } = req.body;
+    const { productId, quantity = 1 } = req.body || {};
 
     if (!productId)
         return next(new ApiError(400, 'productId is required'));
@@ -82,7 +82,7 @@ export const addToCart = asyncHandler(async (req, res, next) => {
 
 export const updateCartItem = asyncHandler(async (req, res, next) => {
     const { productId } = req.params;
-    const { quantity } = req.body;
+    const { quantity } = req.body || {};
 
     if (!Number.isInteger(quantity) || quantity < 1)
         return next(new ApiError(400, 'quantity must be a positive integer'));

@@ -9,7 +9,7 @@ dotenv.config();
 
 const app = express()
 
-app.set('trust proxy', true); // Enable trusting proxy (recommended for Nginx/Cloudflare)
+app.set('trust proxy', 1); // Trust only the first proxy (e.g., Nginx)
 
 // ─── LOGGING (Morgan) 
 app.use(morgan("dev"));

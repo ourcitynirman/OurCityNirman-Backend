@@ -68,7 +68,7 @@ const getWishlist = asyncHandler(async (req, res) => {
 });
 
 const addToWishlist = asyncHandler(async (req, res) => {
-    const { productId } = req.body;
+    const { productId } = req.body || {};
     const validProductId = validateObjectId(productId, "productId");
 
     const product = await Product.findById(validProductId).select(
