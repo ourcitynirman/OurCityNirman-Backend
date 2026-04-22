@@ -130,7 +130,7 @@ const clearWishlist = asyncHandler(async (req, res) => {
     const result = await Wishlist.findOneAndUpdate(
         { user: req.user._id },
         { $set: { items: [] } },
-        { new: true }
+        { returnDocument: 'after' }
     );
     return res
         .status(200)

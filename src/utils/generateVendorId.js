@@ -1,12 +1,4 @@
-import mongoose from "mongoose";
-
-const counterSchema = new mongoose.Schema({
-    _id: { type: String, required: true },
-    seq: { type: Number, default: 0 },
-});
-
-const Counter =
-    mongoose.models.Counter || mongoose.model("Counter", counterSchema);
+import { Counter } from "../models/counter.model.js";
 
 // Main function
 export const generatePrefixedId = async (prefix) => {
@@ -15,7 +7,7 @@ export const generatePrefixedId = async (prefix) => {
     const counter = await Counter.findByIdAndUpdate(
         key,
         { $inc: { seq: 1 } },
-        { new: true, upsert: true }
+        { returnDocument: 'after', upsert: true }
     );
 
     const number = String(counter.seq).padStart(3, "0");

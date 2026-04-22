@@ -693,7 +693,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     {
       $unset: { refreshToken: 1 },
     },
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   const cookieOptions = {
@@ -933,7 +933,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.user._id,
     { $set: updates },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   ).select("-password -refreshToken");
 
   if (!user) throw new ApiError(404, "User not found");

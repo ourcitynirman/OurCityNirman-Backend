@@ -128,7 +128,7 @@ export const updateMySettings = async (req, res, next) => {
         const settings = await Settings.findOneAndUpdate(
             { userId },
             { $set: safeUpdates },
-            { new: true, upsert: true, setDefaultsOnInsert: true }
+            { returnDocument: 'after', upsert: true, setDefaultsOnInsert: true }
         );
 
         res.status(200).json({
@@ -169,7 +169,7 @@ export const adminUpdateSettings = async (req, res, next) => {
         const settings = await Settings.findOneAndUpdate(
             { userId: req.params.userId },
             { $set: safeUpdates },
-            { new: true, upsert: true, setDefaultsOnInsert: true }
+            { returnDocument: 'after', upsert: true, setDefaultsOnInsert: true }
         );
 
         res.status(200).json({

@@ -351,7 +351,7 @@ const markHelpful = async (req, res) => {
         const review = await Review.findByIdAndUpdate(
             reviewId,
             { $inc: { helpfulVotes: 1 } },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!review) {
@@ -421,7 +421,7 @@ const adminUpdateStatus = async (req, res) => {
         const review = await Review.findByIdAndUpdate(
             reviewId,
             { status },
-            { new: true }
+            { returnDocument: 'after' }
         ).populate("userId", "name email avatar profilePhoto photo");
 
         if (!review) {

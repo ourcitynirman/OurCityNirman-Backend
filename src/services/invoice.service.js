@@ -23,10 +23,10 @@ export const createAndSendInvoice = async (order, user) => {
         // Get or Update sequential counter for this specific date
         // Note: Using a unique counter key per day: invoice_MMDDYY
         const counterId = `invoice_${datePart}`;
-        const counter = await Counter.findOneAndUpdate(
-            { id: counterId },
+        const counter = await Counter.findByIdAndUpdate(
+            counterId,
             { $inc: { seq: 1 } },
-            { new: true, upsert: true }
+            { returnDocument: 'after', upsert: true }
         );
         
         const sequencePart = String(counter.seq).padStart(3, '0');
