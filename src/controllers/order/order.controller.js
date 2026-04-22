@@ -247,7 +247,6 @@ export const getMyOrders = asyncHandler(async (req, res) => {
 
 export const getOrderById = asyncHandler(async (req, res) => {
     const order = await Order.findById(req.params.orderId)
-        .populate('items.product', 'name price images slug')
         .lean({ virtuals: true });
 
     if (!order) throw new ApiError(404, 'Order not found');

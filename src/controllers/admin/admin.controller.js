@@ -1,6 +1,7 @@
 import { User } from '../../models/user.model.js';
 import Product from '../../models/Product.model.js';
 import Order from '../../models/Order.model.js';
+import OrderItem from '../../models/OrderItem.model.js';
 import Shop from '../../models/shop.model.js';
 import ApiError from '../../utils/ApiError.js';
 import asyncHandler from '../../utils/asyncHandler.js';
@@ -360,9 +361,9 @@ const getAdminOrders = asyncHandler(async (req, res) => {
     }
 
     if (vendorId) {
-        const vendorProducts = await Product.find({ vendorId }, '_id').lean();
-        const pIds = vendorProducts.map((p) => p._id);
-        filter['items.product'] = { $in: pIds };
+        const vendorOrderItems = await OrderItem.find({ vendor: vendorId }).select('order_id').lean();
+        const oIds = vendorOrderItems.map((oi) => oi.order_id);
+        filter._id = { $in: oIds };
     }
 
     const [orders, total] = await Promise.all([
@@ -387,9 +388,12 @@ const getAdminOrders = asyncHandler(async (req, res) => {
 const getAdminOrderById = asyncHandler(async (req, res) => {
     const order = await Order.findById(req.params.id)
         .populate('user', 'fullName email phone')
-        .populate('items.product', 'name price images vendorId');
+        .lean();
 
     if (!order) throw new ApiError(404, 'Order not found');
+
+    const items = await OrderItem.getByOrder(order._id);
+    order.items = items;
 
     res.status(200).json({
         success: true,

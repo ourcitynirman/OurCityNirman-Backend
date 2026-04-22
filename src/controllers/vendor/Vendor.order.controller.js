@@ -1,4 +1,5 @@
 import Order from '../../models/Order.model.js';
+import OrderItem from '../../models/OrderItem.model.js';
 import Shop from '../../models/shop.model.js';
 import Product from '../../models/Product.model.js';
 import ApiError from '../../utils/ApiError.js';
@@ -24,13 +25,14 @@ async function getVendorProductIds(vendorId) {
     };
 }
 
-async function findVendorOrder(orderId, productIds) {
-    const order = await Order.findOne({
-        _id: orderId,
-        'items.product': { $in: productIds },
-    }).populate('items.product', 'name price images');
-
+async function findVendorOrder(orderId, vendorId) {
+    const order = await Order.findById(orderId).lean();
     if (!order) throw new ApiError(404, 'Order not found');
+
+    const items = await OrderItem.find({ order_id: orderId, vendor: vendorId })
+        .populate('product', 'name price images');
+    
+    order.items = items;
     return order;
 }
 
@@ -41,44 +43,26 @@ export async function getVendorOrders(req, res, next) {
         const pageNum  = Math.max(1, parseInt(page,  10));
         const limitNum = Math.min(50, Math.max(1, parseInt(limit, 10)));
 
-        const { productIds } = await getVendorProductIds(req.user._id);
-
-        if (productIds.length === 0) {
-            return res.status(200).json({
-                success: true,
-                count:   0,
-                total:   0,
-                page:    pageNum,
-                pages:   0,
-                data:    { orders: [] },
-            });
-        }
-
         const filter = {
-            'items.product': { $in: productIds },
-            ...(status ? { status } : {}),
+            vendor: req.user._id,
+            ...(status ? { itemStatus: status } : {}),
         };
 
-        const [orders, total] = await Promise.all([
-            Order.find(filter)
+        const [items, total] = await Promise.all([
+            OrderItem.find(filter)
                 .sort({ createdAt: -1 })
                 .skip((pageNum - 1) * limitNum)
                 .limit(limitNum)
-                .populate('items.product', 'name price images')
-                .populate('user', 'fullName email phone')
-                .select('-statusHistory -__v')
+                .populate('order_id', 'orderNumber totalAmount paymentStatus createdAt estimatedDelivery')
+                .populate('product', 'name price images')
                 .lean(),
-            Order.countDocuments(filter),
+            OrderItem.countDocuments(filter),
         ]);
 
-        const productIdSet = new Set(productIds.map((id) => id.toString()));
-        const filtered = orders.map((order) => ({
-            ...order,
-            items: order.items.filter((item) =>
-                productIdSet.has(
-                    item.product?._id?.toString() ?? item.product?.toString()
-                )
-            ),
+        const enriched = items.map((item) => ({
+            ...item.order_id,
+            _id: item.order_id._id,
+            items: [item],
         }));
 
         return res.status(200).json({
@@ -97,23 +81,12 @@ export async function getVendorOrders(req, res, next) {
 
 export async function getVendorOrder(req, res, next) {
     try {
-        const { productIds } = await getVendorProductIds(req.user._id);
-        const order = await findVendorOrder(req.params.id, productIds);
-
-        const productIdSet = new Set(productIds.map((id) => id.toString()));
-        const vendorItems  = order.items.filter((item) =>
-            productIdSet.has(
-                item.product?._id?.toString() ?? item.product?.toString()
-            )
-        );
+        const order = await findVendorOrder(req.params.id, req.user._id);
 
         return res.status(200).json({
             success: true,
             data: {
-                order: {
-                    ...order.toObject(),
-                    items: vendorItems,
-                },
+                order
             },
         });
     } catch (err) {
@@ -144,8 +117,7 @@ export async function updateOrderStatus(req, res, next) {
             return next(new ApiError(403, 'OTP verification required to mark order as delivered'));
         }
 
-        const { productIds } = await getVendorProductIds(req.user._id);
-        const order           = await findVendorOrder(req.params.id, productIds);
+        const order = await findVendorOrder(req.params.id, req.user._id);
 
         if (order.status === 'cancelled') {
             return next(new ApiError(400, 'Cannot update status of a cancelled order'));
