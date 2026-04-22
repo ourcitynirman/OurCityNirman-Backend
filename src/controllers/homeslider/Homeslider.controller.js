@@ -105,8 +105,8 @@ const createSlide = asyncHandler(async (req, res) => {
         buttonText: buttonText?.trim() || "Shop Now",
         link: link?.trim() || "/",
         order: slideOrder,
-        isActive: isActive === "true" || isActive === true,
-        duration: parseInt(duration) || 5000,
+        isActive: isActive !== undefined ? (isActive === "true" || isActive === true) : true,
+        duration: duration !== undefined ? parseInt(duration) : 5000,
         createdBy: req.user._id,
         updatedBy: req.user._id,
     });
@@ -193,7 +193,11 @@ const bulkUpdateSlides = asyncHandler(async (req, res) => {
     const allowedFields = ["isActive", "buttonText", "duration"];
     const sanitizedUpdates = {};
     for (const key of allowedFields) {
-        if (updates[key] !== undefined) sanitizedUpdates[key] = updates[key];
+        if (updates[key] !== undefined) {
+            if (key === "isActive") sanitizedUpdates[key] = (updates[key] === "true" || updates[key] === true);
+            else if (key === "duration") sanitizedUpdates[key] = parseInt(updates[key]);
+            else sanitizedUpdates[key] = updates[key];
+        }
     }
 
     if (Object.keys(sanitizedUpdates).length === 0) throw new ApiError(400, "No valid fields provided for bulk update");
