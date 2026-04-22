@@ -1,6 +1,6 @@
 import Order from '../../models/Order.model.js';
 import Shop from '../../models/shop.model.js';
-import Product from '../../models/Product.js';
+import Product from '../../models/Product.model.js';
 import ApiError from '../../utils/ApiError.js';
 
 const STATUS_TRANSITIONS = {

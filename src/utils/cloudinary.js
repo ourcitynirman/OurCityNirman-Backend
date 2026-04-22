@@ -48,17 +48,18 @@ const uploadOnCloudinary = async (localFilePath, debug = false) => {
 };
 
 
-// Delete local file
-const deleteLocalFile = (path, debug = false) => {
-    if (fs.existsSync(path)) {
-        try {
-            fs.unlinkSync(path);
-            if (debug) console.log(" Local file deleted:", path);
-        } catch (err) {
-            console.warn("Failed to delete local file:", err.message);
+// Delete local file helper function
+const deleteLocalFile = (filePath, debug = false) => {
+    if (!filePath) return;
+    try {
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            if (debug) console.log("Local file deleted successfully:", filePath);
+        } else if (debug) {
+            console.log("File not found, skipping deletion:", filePath);
         }
-    } else if (debug) {
-        console.log(" File not found while deleting:", path);
+    } catch (err) {
+        console.warn("Failed to delete local file:", filePath, "| Error:", err.message);
     }
 };
 

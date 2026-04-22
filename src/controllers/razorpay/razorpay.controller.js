@@ -4,8 +4,8 @@ import { getRazorpay } from '../../config/razorpay.config.js';
 
 import Order, { calcEstimatedDelivery } from '../../models/Order.model.js';
 import Cart from '../../models/cart.model.js';
-import Product from '../../models/Product.js';
-import Address from '../../models/UserAddress.model.js';
+import Product from '../../models/Product.model.js';
+import Address from '../../models/Address.model.js';
 import asyncHandler from '../../utils/asyncHandler.js';
 import ApiError from '../../utils/ApiError.js';
 import { createAndSendInvoice } from '../../services/invoice.service.js';

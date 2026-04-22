@@ -1,5 +1,5 @@
 import Wishlist from "../../models/Wishlist.model.js";
-import Product from "../../models/Product.js";
+import Product from "../../models/Product.model.js";
 import Cart from "../../models/cart.model.js";
 import validateObjectId from "../../utils/ValidateObjectId.js";
 import ApiResponse from "../../utils/ApiResponse.js";

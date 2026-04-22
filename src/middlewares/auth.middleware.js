@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import { User } from "../models/user.model.js";
 import ApiError from "../utils/ApiError.js";
 import asyncHandler from "../utils/asyncHandler.js";
-import Product from "../models/Product.js";
+import Product from "../models/Product.model.js";
 
 const extractToken = (req) => {
   if (req.cookies?.accessToken) {

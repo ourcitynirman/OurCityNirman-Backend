@@ -3,10 +3,10 @@ import mongoose from "mongoose";
 const invoiceSchema = new mongoose.Schema(
     {
         invoiceNumber: {
-            type: String,
+            type: String, //INV-mmddyy-001
             required: true,
             unique: true,
-            index: true
+            index: true,
         },
         order: {
             type: mongoose.Schema.Types.ObjectId,
@@ -20,6 +20,7 @@ const invoiceSchema = new mongoose.Schema(
             required: true,
             index: true
         },
+      
         orderNumber: { type: String, required: true },
         orderDate:   { type: Date, required: true },
         invoiceDate: { type: Date, default: Date.now },
@@ -53,15 +54,8 @@ const invoiceSchema = new mongoose.Schema(
 
         items: [
             {
-                description:  { type: String, required: true },
-                hsn:          { type: String, default: "0000" },
-                qty:          { type: Number, required: true },
-                grossAmount:  { type: Number, required: true },
-                discount:     { type: Number, default: 0 },
-                taxableValue: { type: Number, required: true },
-                igstRate:    { type: Number, default: 18 },
-                igstAmount:   { type: Number, required: true },
-                total:        { type: Number, required: true }
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "InvoiceItem"
             }
         ],
 

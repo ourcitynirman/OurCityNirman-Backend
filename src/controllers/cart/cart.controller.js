@@ -1,5 +1,5 @@
 import Cart from '../../models/cart.model.js';
-import Product from '../../models/Product.js';
+import Product from '../../models/Product.model.js';
 import ApiError from '../../utils/ApiError.js';
 import asyncHandler from '../../utils/asyncHandler.js';
 

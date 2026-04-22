@@ -1,4 +1,4 @@
-import Address from '../../models/UserAddress.model.js';
+import Address from '../../models/Address.model.js';
 import AppError from '../../utils/ApiError.js';
 
 const MAX_ADDRESSES = 10;

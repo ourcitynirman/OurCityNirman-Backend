@@ -1,9 +1,12 @@
 import puppeteer from 'puppeteer';
 import Invoice from '../models/Invoice.model.js';
+import InvoiceItem from '../models/InvoiceItem.model.js';
+import HSN from '../models/HSN.model.js';
+import { Counter } from '../models/counter.model.js';
 import { uploadStream } from '../utils/cloudinary.js';
 import { sendMail } from './mail.service.js';
 import { generateInvoiceHtml } from '../utils/invoiceTemplate.js';
-import Product from '../models/Product.js';
+import Product from '../models/Product.model.js';
 
 /**
  * Service to handle GST Tax Invoice generation and distribution
@@ -12,29 +15,56 @@ export const createAndSendInvoice = async (order, user) => {
     try {
         // 1. Prepare Invoice Data
         const invoiceDate = new Date();
-        const year = invoiceDate.getFullYear();
-        const month = String(invoiceDate.getMonth() + 1).padStart(2, '0');
-        const day = String(invoiceDate.getDate()).padStart(2, '0');
-        const randomStr = Math.random().toString(36).substring(2, 7).toUpperCase();
-        const invoiceNumber = `INV-${year}${month}${day}-${randomStr}`;
+        const yy = String(invoiceDate.getFullYear()).slice(-2);
+        const mm = String(invoiceDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(invoiceDate.getDate()).padStart(2, '0');
+        const datePart = `${mm}${dd}${yy}`;
+
+        // Get or Update sequential counter for this specific date
+        // Note: Using a unique counter key per day: invoice_MMDDYY
+        const counterId = `invoice_${datePart}`;
+        const counter = await Counter.findOneAndUpdate(
+            { id: counterId },
+            { $inc: { seq: 1 } },
+            { new: true, upsert: true }
+        );
+        
+        const sequencePart = String(counter.seq).padStart(3, '0');
+        const invoiceNumber = `INV-${datePart}-${sequencePart}`;
 
         // Fetch HSN/IGST info from products (as current items only have snippets)
         const enrichedItems = await Promise.all(order.items.map(async (item) => {
-            const product = await Product.findById(item.product).select('hsn igstRate');
-            const hsn = product?.hsn || "0000";
-            const igstRate = product?.igstRate || 18;
+            const product = await Product.findById(item.product).select('hsn igstRate').populate('hsn');
+            
+            let hsnObject = product?.hsn;
+            if (!hsnObject) {
+                // Fallback: try to find a default HSN or create a dummy one if needed
+                hsnObject = await HSN.findOne({ hsn_code: "0000" });
+                if (!hsnObject) {
+                    // Create default HSN if not exists (safety)
+                    hsnObject = await HSN.create({
+                        hsn_code: "0000",
+                        description: "Default HSN",
+                        category: "Default",
+                        gst_rate: 18
+                    });
+                }
+            }
+
+            const hsnCode = hsnObject?.hsn_code || "0000";
+            const igstRate = hsnObject?.gst_rate ?? product?.igstRate ?? 18;
             
             // IGST Calculation
-            // Taxable Value = price / (1 + (igstRate/100))
             const taxableValuePerUnit = item.price / (1 + (igstRate / 100));
             const igstAmountPerUnit = item.price - taxableValuePerUnit;
             
             return {
                 description:  item.productSnapshot.name,
-                hsn:          hsn,
+                hsn:          hsnObject._id, // Reference to HSN model
+                hsnCode:      hsnCode,      // For HTML template
                 qty:          item.quantity,
                 grossAmount:  item.price * item.quantity,
-                discount:     0, // Currently not tracked per item in order model
+                discount:     0,
                 taxableValue: taxableValuePerUnit * item.quantity,
                 igstRate:    igstRate,
                 igstAmount:   igstAmountPerUnit * item.quantity,
@@ -57,7 +87,7 @@ export const createAndSendInvoice = async (order, user) => {
 
         const firstVendorId = order.items[0]?.vendor;
         if (firstVendorId) {
-            const VendorProfile = (await import('../models/VendorProfile.js')).default;
+            const VendorProfile = (await import('../models/VendorProfile.model.js')).default;
             const vProfile = await VendorProfile.findOne({ userId: firstVendorId });
             if (vProfile) {
                 sellerInfo = {
@@ -95,7 +125,7 @@ export const createAndSendInvoice = async (order, user) => {
                 state:       order.deliveryAddress.state,
                 pincode:     order.deliveryAddress.pincode
             },
-            items: enrichedItems,
+            // Metadata for items (not yet saved as Refs)
             subtotal,
             deliveryCharge: Math.round(order.deliveryCharge || 0),
             totalTax,
@@ -104,10 +134,28 @@ export const createAndSendInvoice = async (order, user) => {
             razorpayPaymentId: order.razorpayPaymentId
         };
 
-        // 2. Render HTML String
-        const html = generateInvoiceHtml(invoiceData);
+        // 2. SAVE TO DATABASE FIRST (Performance & Integrity)
+        // This ensures the record exists even if Puppeteer/Cloudinary fails
+        const invoice = await Invoice.create(invoiceData);
 
-        // 3. Generate PDF Buffer with Puppeteer
+        const createdItems = await InvoiceItem.insertMany(
+            enrichedItems.map(item => ({
+                ...item,
+                invoice: invoice._id
+            }))
+        );
+
+        invoice.items = createdItems.map(item => item._id);
+        await invoice.save();
+
+        // 3. Render HTML String and Generate PDF (Heavy Lifting)
+        // Pass the string HSN for the template
+        const templateData = {
+            ...invoiceData,
+            items: enrichedItems.map(i => ({ ...i, hsn: i.hsnCode }))
+        };
+        const html = generateInvoiceHtml(templateData);
+
         const browser = await puppeteer.launch({
             headless: "new",
             args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -121,14 +169,13 @@ export const createAndSendInvoice = async (order, user) => {
         });
         await browser.close();
 
-        // 4. Upload to Cloudinary
+        // 4. Upload to Cloudinary and Update Invoice
         const uploadResult = await uploadStream(pdfBuffer, "raw");
-        invoiceData.pdfUrl = uploadResult.url;
+        
+        invoice.pdfUrl = uploadResult.url;
+        await invoice.save();
 
-        // 5. Save to Database
-        const invoice = await Invoice.create(invoiceData);
-
-        // 6. Send Email (Fire and forget style)
+        // 5. Send Email (Fire and forget style)
         sendMail({
             to: user.email,
             subject: `GST Tax Invoice - ${invoiceNumber} | OurCityNirman`,

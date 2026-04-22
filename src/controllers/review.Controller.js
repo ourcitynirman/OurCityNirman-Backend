@@ -1,7 +1,7 @@
 
 import mongoose from "mongoose";
-import Review from "../models/review.js";
-import Product from "../models/Product.js";
+import Review from "../models/Review.model.js";
+import Product from "../models/Product.model.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 
 

@@ -1,5 +1,6 @@
 
 import mongoose from 'mongoose';
+import HSN from './HSN.model.js';
 const offerSchema = new mongoose.Schema({
   couponCode: {
     type: String,
@@ -163,9 +164,9 @@ const productSchema = new mongoose.Schema({
     uppercase: true
   },
   hsn: {
-    type: String,
-    trim: true,
-    default: "0000"
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'HSN',
+    default: null,
   },
   igstRate: {
     type: Number,

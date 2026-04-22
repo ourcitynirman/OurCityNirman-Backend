@@ -1,5 +1,5 @@
 import asyncHandler from "../../utils/asyncHandler.js";
-import Product from "../../models/Product.js";
+import Product from "../../models/Product.model.js";
 import Shop from "../../models/shop.model.js";
 import { deleteFromCloudinary, uploadOnCloudinary } from "../../utils/cloudinary.js";
 import ApiError from "../../utils/ApiError.js";

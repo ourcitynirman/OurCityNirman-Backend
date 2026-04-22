@@ -9,7 +9,7 @@ const TEMP_DIR = "./public/temp";
 
 if (!fs.existsSync(TEMP_DIR)) {
     fs.mkdirSync(TEMP_DIR, { recursive: true });
-    console.log(" Created temp upload folder:", TEMP_DIR);
+    // console.log(" Created temp upload folder:", TEMP_DIR);
 }
 
 
@@ -19,9 +19,15 @@ const ALLOWED_MIME_TYPES = [
     "image/png",
     "image/webp",
     "image/gif",
+    "image/svg+xml",
+    "application/pdf",
+    "video/mp4",
+    "video/mpeg",
+    "video/webm",
+    "video/quicktime",
 ];
 
-const MAX_FILE_SIZE_MB = 5;
+const MAX_FILE_SIZE_MB = 20; // Increased to 20MB for small videos/PDFs
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 
@@ -41,7 +47,7 @@ const fileFilter = (req, file, cb) => {
     if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
        
         return cb(
-            Object.assign(new Error(`Unsupported file type: ${file.mimetype}. Allowed: jpeg, png, webp, gif`), { statusCode: 400 }),
+            Object.assign(new Error(`Unsupported file type: ${file.mimetype}. Allowed: images, pdf, videos`), { statusCode: 400 }),
             false
         );
     }
@@ -51,7 +57,10 @@ const fileFilter = (req, file, cb) => {
 
 export const upload = multer({
     storage,
-    
+    fileFilter,
+    limits: {
+        fileSize: MAX_FILE_SIZE_BYTES
+    }
 });
 
 

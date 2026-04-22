@@ -1,4 +1,4 @@
-import Settings from "../models/Settings.js";
+import Settings from "../models/Settings.model.js";
 import User     from "../models/user.model.js";
 import ApiError from "../utils/ApiError.js";
 
