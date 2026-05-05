@@ -20,12 +20,17 @@ src/
 # 1. Clone & install
 npm install
 
-# 2. Create your .env
-cp .env.example .env
-# Edit .env — fill in real values
+# 2. Setup environment files
+# Local dev (using MongoDB localhost)
+cp .env.example .env.development
+# Production simulation (using MongoDB Atlas)
+cp .env.example .env.production
 
-# 3. Start dev server (auto-reload)
+# 3. Start dev server (loads .env.development)
 npm run dev
+
+# 4. Test production mode locally (loads .env.production)
+npm start
 
 # Health check
 curl http://localhost:5000/api/v1/health
