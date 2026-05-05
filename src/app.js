@@ -15,6 +15,8 @@ import dotenv       from 'dotenv';
 import { registerRoutes } from './routes.js';
 import errorHandler       from './shared/middlewares/Errorhandler.middleware.js';
 
+import logger from './shared/utils/logger.js';
+
 dotenv.config();
 
 const app = express();
@@ -24,7 +26,10 @@ const app = express();
 app.set('trust proxy', 1);
 
 // ─── HTTP REQUEST LOGGER ────────────────────────────────────────────────────
-app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+app.use(morgan(
+    process.env.NODE_ENV === 'production' ? 'combined' : 'dev',
+    { stream: { write: (message) => logger.info(message.trim()) } }
+));
 
 // ─── GLOBAL RATE LIMITER ────────────────────────────────────────────────────
 const globalLimiter = rateLimit({

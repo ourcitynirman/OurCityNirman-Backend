@@ -1,8 +1,7 @@
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import { User } from "../../modules/auth/user.model.js";
-import ApiError from "../utils/ApiError.js";
-import asyncHandler from "../utils/asyncHandler.js";
+import { ApiError, asyncHandler } from "../utils/api.utils.js";
 import Product from "../../modules/products/product.model.js";
 import { ROLES } from "../constants/roles.js";
 

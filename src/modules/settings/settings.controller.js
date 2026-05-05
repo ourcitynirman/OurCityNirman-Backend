@@ -1,6 +1,6 @@
 import Settings from "./settings.model.js";
 import { User }     from "../auth/user.model.js";
-import ApiError from "../../shared/utils/ApiError.js";
+import { ApiError } from "../../shared/utils/api.utils.js";
 
 
 const VENDOR_ALLOWED_FIELDS = [

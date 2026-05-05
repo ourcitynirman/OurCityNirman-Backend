@@ -1,8 +1,8 @@
 import Brand from "./brand.model.js";
 import Category from "../category/category.model.js";
-import asyncHandler from "../../shared/utils/asyncHandler.js";
-import ApiError from "../../shared/utils/ApiError.js";
-import ApiResponse from "../../shared/utils/ApiResponse.js";
+import { asyncHandler } from "../../shared/utils/api.utils.js";
+import { ApiError } from "../../shared/utils/api.utils.js";
+import { ApiResponse } from "../../shared/utils/api.utils.js";
 
 /**
  * @desc    Get all brands (with pagination and search)

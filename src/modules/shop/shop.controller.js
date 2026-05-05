@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
 import Shop from "./shop.model.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../../shared/utils/cloudinary.js";
-import ApiError from "../../shared/utils/ApiError.js";
-import ApiResponse from "../../shared/utils/ApiResponse.js";
-import asyncHandler from "../../shared/utils/asyncHandler.js";
-import { generateVendorId } from "../../shared/utils/generateVendorId.js";
+import { ApiError } from "../../shared/utils/api.utils.js";
+import { ApiResponse } from "../../shared/utils/api.utils.js";
+import { asyncHandler } from "../../shared/utils/api.utils.js";
+import { generateVendorId } from "../../shared/utils/generator.utils.js";
 import { ROLES } from "../../shared/constants/roles.js";
 
 

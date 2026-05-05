@@ -2,8 +2,9 @@ import Order from '../orders/order.model.js';
 import OrderItem from '../orders/order-item.model.js';
 import Shop from '../shop/shop.model.js';
 import Product from '../products/product.model.js';
-import ApiError from '../../shared/utils/ApiError.js';
-import { sendDeliveryOTP } from '../../shared/services/Delivery.otp.service.js';
+import { ApiError } from '../../shared/utils/api.utils.js';
+import { sendDeliveryOTP } from '../../shared/services/delivery-otp.service.js';
+import { maskEmail } from '../../shared/utils/validation.utils.js';
 
 
 
@@ -130,21 +131,21 @@ export async function updateOrderStatus(req, res, next) {
             return next(new ApiError(400, err.message));
         }
 
+        // --- OTP TRIGGER ---
+        if (status === 'out_for_delivery') {
+            try {
+                await sendDeliveryOTP(order._id);
+            } catch (otpErr) {
+                console.error(`[OTP] Auto-send failed for ${order.orderNumber}:`, otpErr.message);
+            }
+        }
+
         if (status === 'delivered') {
             order.deliveredAt = new Date();
             if (order.paymentMethod === 'cod') {
                 order.paymentStatus = 'paid';
             }
             await order.save();
-        }
-
-        // ✅ Auto-send delivery OTP when order moves to 'out_for_delivery'
-        // Non-blocking: email failure does NOT roll back the status update
-        if (status === 'out_for_delivery') {
-            sendDeliveryOTP(order._id)
-            .catch(err =>
-                console.error(`[OTP] Auto-send failed for order ${order.orderNumber}:`, err.message)
-            );
         }
 
         // Sync individual items
@@ -155,7 +156,7 @@ export async function updateOrderStatus(req, res, next) {
 
         return res.status(200).json({
             success: true,
-            message: `Order status updated to "${status}"`,
+            message: `Order status updated to "${status}"${status === 'out_for_delivery' ? ' and Delivery OTP sent to customer.' : ''}`,
             data:    { order },
         });
     } catch (err) {

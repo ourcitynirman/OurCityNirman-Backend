@@ -3,8 +3,8 @@ import mongoose from "mongoose";
 import Review from "./review.model.js";
 import Product from "../products/product.model.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../../shared/utils/cloudinary.js";
-import asyncHandler from "../../shared/utils/asyncHandler.js";
-import ApiError from "../../shared/utils/ApiError.js";
+import { asyncHandler } from "../../shared/utils/api.utils.js";
+import { ApiError } from "../../shared/utils/api.utils.js";
 import { ROLES } from "../../shared/constants/roles.js";
 
 /**

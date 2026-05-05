@@ -23,12 +23,20 @@ const productSchema = new mongoose.Schema({
     required: [true, 'Brand is required'],
     index: true
   },
+  /**
+   * @property {ObjectId} category - Primary leaf category of the product
+   */
   category: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category',
     required: [true, 'Category is required'],
     index: true
   },
+
+  /**
+   * @property {ObjectId[]} categoryAncestors - Flattened array of category and its parents (root to leaf).
+   * Used for high-performance hierarchical filtering (e.g., searching for "Construction Materials" returns all sub-categories).
+   */
   categoryAncestors: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category'
@@ -130,6 +138,7 @@ productSchema.index({ isActive: 1, featured: 1 });
 productSchema.index({ isActive: 1, trending: 1 });
 productSchema.index({ categoryAncestors: 1, isActive: 1 });
 productSchema.index({ name: 'text', description: 'text', brand: 'text', sku: 'text' });
+productSchema.index({ categoryAncestors: 1, isActive: 1, price: 1 }); // High-performance search index
 productSchema.index({ price: 1 });
 productSchema.index({ rating: -1 });
 productSchema.index({ createdAt: -1 });

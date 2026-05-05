@@ -1,5 +1,5 @@
 import Address from './address.model.js';
-import ApiError from '../../shared/utils/ApiError.js';
+import { ApiError } from '../../shared/utils/api.utils.js';
 
 const MAX_ADDRESSES = 10;
 

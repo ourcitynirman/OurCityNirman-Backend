@@ -1,14 +1,14 @@
 
-import asyncHandler from "../../shared/utils/asyncHandler.js";
-import ApiError from "../../shared/utils/ApiError.js";
-import ApiResponse from "../../shared/utils/ApiResponse.js";
+import { asyncHandler } from "../../shared/utils/api.utils.js";
+import { ApiError } from "../../shared/utils/api.utils.js";
+import { ApiResponse } from "../../shared/utils/api.utils.js";
 
 import { User } from "./user.model.js";
 
 import bcrypt from 'bcryptjs';
 import { OTP } from "./otp.model.js";
 import { sendMail } from "../../shared/services/mail.service.js";
-import { generateOTP } from "../../shared/utils/generateOtp.js";
+import { generateOTP } from "../../shared/utils/generator.utils.js";
 import jwt from "jsonwebtoken";
 import { ALL_ROLES, ROLES } from "../../shared/constants/roles.js";
 
@@ -415,6 +415,9 @@ const registerUser = asyncHandler(async (req, res) => {
 
   const otp = generateOTP();
   const hashedOtp = await bcrypt.hash(otp.toString(), 10);
+  
+  // Also hash the password before storing in metadata for security
+  const hashedPasswordForMetadata = await bcrypt.hash(password, 10);
 
 
   await OTP.deleteMany({ email: trimmedEmail, type: "registration" });
@@ -428,7 +431,7 @@ const registerUser = asyncHandler(async (req, res) => {
     metadata: {
       fullName: trimmedFullName,
       phone: trimmedPhone,
-      password,
+      password: hashedPasswordForMetadata,
       role,
     },
   });

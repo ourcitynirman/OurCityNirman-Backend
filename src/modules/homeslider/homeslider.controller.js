@@ -2,8 +2,8 @@ import mongoose from "mongoose";
 import HomeSlider from "./homeslider.model.js";
 import { User } from "../auth/user.model.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../../shared/utils/cloudinary.js";
-import ApiError from "../../shared/utils/ApiError.js";
-import asyncHandler from "../../shared/utils/asyncHandler.js";
+import { ApiError } from "../../shared/utils/api.utils.js";
+import { asyncHandler } from "../../shared/utils/api.utils.js";
 
 /**
  * @desc    Get all active slider images for the homepage

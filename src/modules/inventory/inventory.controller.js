@@ -1,6 +1,6 @@
-import asyncHandler from "../../shared/utils/asyncHandler.js";
-import ApiError from "../../shared/utils/ApiError.js";
-import ApiResponse from '../../shared/utils/ApiResponse.js';
+import { asyncHandler } from "../../shared/utils/api.utils.js";
+import { ApiError } from "../../shared/utils/api.utils.js";
+import { ApiResponse } from '../../shared/utils/api.utils.js';
 import Inventory from "./inventory.model.js";
 import Product from "../products/product.model.js";
 

@@ -5,11 +5,10 @@
  */
 
 // ── 1. Load environment FIRST (before any other import uses process.env) ──
-import { loadEnv } from './shared/utils/loadEnv.js';
+import { loadEnv, validateEnv } from './shared/utils/env.utils.js';
 loadEnv();
 
 // ── 2. Validate required env vars ─────────────────────────────────────────
-import { validateEnv } from './shared/utils/validateEnv.js';
 validateEnv();
 
 // ── 3. App & DB ────────────────────────────────────────────────────────────

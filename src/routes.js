@@ -23,6 +23,8 @@ import wishlistRouter     from './modules/wishlist/wishlist.route.js';
 import orderRouter        from './modules/orders/order.route.js';
 import reviewRouter       from './modules/review/review.route.js';
 import invoiceRouter      from './modules/invoice/invoice.route.js';
+import refundRouter       from './modules/refund/refund.route.js';
+import paymentRouter      from './modules/payment/payment.route.js';
 
 import vendorRouter       from './modules/vendor/vendor.route.js';
 import shopRouter         from './modules/shop/shop.route.js';
@@ -141,12 +143,21 @@ export function registerRoutes(app) {
      */
     app.use('/api/v1/reviews', reviewRouter);
 
-    /**
-     * @prefix  /api/v1/invoice
-     * @access  Private (Owner/Vendor/Admin)
-     * @desc    Invoice retrieval, download PDF, resend email
-     */
     app.use('/api/v1/invoice', invoiceRouter);
+
+    /**
+     * @prefix  /api/v1/refunds
+     * @access  Private (Admin for processing | User/Admin for details)
+     * @desc    Order refund processing via Razorpay and record retrieval
+     */
+    app.use('/api/v1/refunds', refundRouter);
+
+    /**
+     * @prefix  /api/v1/payments
+     * @access  Private (All roles)
+     * @desc    Payment gateway operations (Razorpay creation, verification)
+     */
+    app.use('/api/v1/payments', paymentRouter);
 
     // ── Vendor ────────────────────────────────────────────────────────────────
     /**

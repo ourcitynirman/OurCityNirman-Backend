@@ -1,9 +1,27 @@
-/**
- * @file    validateEnv.js
- * @desc    Validates required environment variables at server startup.
- *          Fails fast in production if any critical variable is missing.
- */
+import dotenv from 'dotenv';
+import { existsSync } from 'fs';
+import { resolve } from 'path';
 
+/**
+ * @desc    Smart environment loader.
+ *          Loads the correct .env file based on NODE_ENV.
+ */
+export function loadEnv() {
+    const env = process.env.NODE_ENV || 'development';
+    const envFiles = [`.env.${env}`, `.env`];
+
+    for (const file of envFiles) {
+        const fullPath = resolve(process.cwd(), file);
+        if (existsSync(fullPath)) {
+            dotenv.config({ path: fullPath, override: false });
+            console.log(`📄  Loaded env: ${file}  [NODE_ENV=${env}]`);
+        }
+    }
+}
+
+/**
+ * @desc    Validates required environment variables at server startup.
+ */
 const REQUIRED_VARS = [
     'MONGODB_URI',
     'ACCESS_TOKEN_SECRET',
@@ -27,11 +45,9 @@ export function validateEnv() {
         const msg = `Missing environment variables:\n  ${missing.join('\n  ')}`;
 
         if (isProd) {
-            // Hard fail in production — never run with incomplete config
             console.error(`\n❌ STARTUP FAILED — ${msg}\n`);
             process.exit(1);
         } else {
-            // Warn in development — allow partial runs for testing
             console.warn(`\n⚠️  WARNING — ${msg}\n  (Some features may not work)\n`);
         }
     } else {

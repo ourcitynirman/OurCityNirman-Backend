@@ -20,7 +20,7 @@ const otpSchema = new mongoose.Schema(
     expiresAt: {
       type: Date,
       required: true,
-      index: { expires: 0 },  // MongoDB TTL auto-deletes expired OTPs
+      index: { expires: 0 }, 
     },
     isUsed: {
       type: Boolean,
@@ -40,10 +40,6 @@ const otpSchema = new mongoose.Schema(
   }
 );
 
-// General lookup index
 otpSchema.index({ email: 1, type: 1, isUsed: 1 });
-
-// Optimized compound index for delivery OTP verification query
-otpSchema.index({ email: 1, type: 1, isUsed: 1, 'metadata.orderId': 1 });
 
 export const OTP = mongoose.model("OTP", otpSchema);

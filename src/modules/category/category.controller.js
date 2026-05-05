@@ -1,8 +1,8 @@
 import Category from "./category.model.js";
 import Product from "../products/product.model.js";
-import ApiError from "../../shared/utils/ApiError.js";
-import ApiResponse from "../../shared/utils/ApiResponse.js";
-import asyncHandler from "../../shared/utils/asyncHandler.js";
+import { ApiError } from "../../shared/utils/api.utils.js";
+import { ApiResponse } from "../../shared/utils/api.utils.js";
+import { asyncHandler } from "../../shared/utils/api.utils.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../../shared/utils/cloudinary.js";
 import mongoose from 'mongoose';
 

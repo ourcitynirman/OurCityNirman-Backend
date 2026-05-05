@@ -42,20 +42,20 @@ const inventorySchema = new mongoose.Schema({
 });
 
 // Atomic stock update method
-inventorySchema.statics.adjustStock = async function(listingId, adjustment) {
+inventorySchema.statics.adjustStock = async function (listingId, adjustment) {
   const inventory = await this.findOneAndUpdate(
     { listingId, availableQuantity: { $gte: adjustment < 0 ? Math.abs(adjustment) : 0 } },
-    { 
+    {
       $inc: { availableQuantity: adjustment },
       $set: { lastStockUpdate: new Date() }
     },
     { new: true }
   );
-  
+
   if (!inventory) {
     throw new Error('Insufficient stock or listing not found');
   }
-  
+
   return inventory;
 };
 

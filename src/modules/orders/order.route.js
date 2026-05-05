@@ -1,10 +1,6 @@
 import { Router } from 'express';
 import { authenticate, authorize } from '../../shared/middlewares/auth.middleware.js';
 
-import {
-    createRazorpayOrder,
-    verifyRazorpayPayment,
-} from '../payment/payment.controller.js';
 
 import {
     placeOrder,
@@ -18,26 +14,12 @@ import {
     updateItemTracking,
     adminGetAllOrders,
     adminCancelOrder,
+    verifyDeliveryOrder,
 } from './order.controller.js';
 import { ALL_ROLES, ROLES } from '../../shared/constants/roles.js';
 
 const OrderRouter = Router();
 
-// --- PAYMENT GATEWAY (RAZORPAY) ---
-
-/**
- * @desc    Create a new Razorpay order for payment processing
- * @route   POST /api/v1/orders/create-razorpay-order
- * @access  Private
- */
-OrderRouter.post('/create-razorpay-order', authenticate, authorize(...ALL_ROLES), createRazorpayOrder);
-
-/**
- * @desc    Verify Razorpay payment signature
- * @route   POST /api/v1/orders/verify-payment
- * @access  Private
- */
-OrderRouter.post('/verify-payment',        authenticate, authorize(...ALL_ROLES), verifyRazorpayPayment);
 
 // --- VENDOR ORDER MANAGEMENT ---
 
@@ -62,7 +44,19 @@ OrderRouter.patch(
     '/:orderId/status',
     authenticate,
     authorize(ROLES.VENDOR),
-    updateOrderStatus          
+    updateOrderStatus
+);
+
+/**
+ * @desc    Verify delivery OTP and mark order as delivered
+ * @route   POST /api/v1/orders/:orderId/verify-delivery-otp
+ * @access  Private (Vendor/Admin)
+ */
+OrderRouter.post(
+    '/:orderId/verify-delivery-otp',
+    authenticate,
+    authorize(ROLES.VENDOR, ROLES.ADMIN),
+    verifyDeliveryOrder
 );
 
 /**
@@ -88,7 +82,7 @@ OrderRouter.get(
     '/admin/all',
     authenticate,
     authorize(ROLES.ADMIN),
-    adminGetAllOrders         
+    adminGetAllOrders
 );
 
 /**
@@ -114,8 +108,10 @@ OrderRouter.patch(
     '/:orderId/admin-status',
     authenticate,
     authorize(ROLES.ADMIN),
-    adminUpdateOrderStatus      
+    adminUpdateOrderStatus
 );
+
+
 
 // --- USER ORDER MANAGEMENT ---
 
@@ -130,7 +126,7 @@ OrderRouter.post(
     '/',
     authenticate,
     authorize(...ALL_ROLES),
-    placeOrder                  
+    placeOrder
 );
 
 /**
@@ -183,7 +179,7 @@ OrderRouter.patch(
     '/:orderId/cancel',
     authenticate,
     authorize(...ALL_ROLES),
-    cancelOrder                 
+    cancelOrder
 );
 
 export default OrderRouter;

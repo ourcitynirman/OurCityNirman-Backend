@@ -2,9 +2,9 @@ import OrderItem from '../orders/order-item.model.js';
 import Product from '../products/product.model.js';
 import Review from '../review/review.model.js';
 import Shop from '../shop/shop.model.js';
-import asyncHandler from '../../shared/utils/asyncHandler.js';
-import ApiResponse from '../../shared/utils/ApiResponse.js';
-import ApiError from '../../shared/utils/ApiError.js';
+import { asyncHandler } from '../../shared/utils/api.utils.js';
+import { ApiResponse } from '../../shared/utils/api.utils.js';
+import { ApiError } from '../../shared/utils/api.utils.js';
 import mongoose from 'mongoose';
 
 /**

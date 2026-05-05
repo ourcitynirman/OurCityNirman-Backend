@@ -116,7 +116,7 @@ ProductsRoute.get('/featured', publicLimiter, getFeaturedProducts);
 
 /**
  * @desc    Get trending products based on popularity
- * @route   GET /api/v1/products/trending
+ * @route   /api/v1/products/trending
  * @access  Public
  */
 ProductsRoute.get('/trending', publicLimiter, getTrendingProducts);

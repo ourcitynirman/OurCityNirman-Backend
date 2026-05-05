@@ -6,8 +6,9 @@
  *          - Cleans up temp uploaded files on any error.
  */
 
-import ApiError from '../utils/ApiError.js';
+import { ApiError } from "../utils/api.utils.js";
 import { cleanupTempFile, cleanupTempFiles } from './multer.middleware.js';
+import logger from "../utils/logger.js";
 
 const IS_PROD = process.env.NODE_ENV === 'production';
 
@@ -24,9 +25,10 @@ const errorHandler = (err, req, res, next) => { // eslint-disable-line no-unused
 
     // ── Structured logging (server-side only) ───────────────────────────
     if (!IS_PROD || err.statusCode >= 500) {
-        console.error(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
-        console.error('ERROR:', err.message);
-        if (!IS_PROD) console.error('STACK:', err.stack);
+        logger.error(`${req.method} ${req.originalUrl} - ${err.message}`, {
+            stack: !IS_PROD ? err.stack : undefined,
+            statusCode: err.statusCode || 500
+        });
     }
 
     // ── Known API error ──────────────────────────────────────────────────

@@ -1,10 +1,10 @@
 import Wishlist from "./wishlist.model.js";
 import Product from "../products/product.model.js";
 import Cart from "../cart/cart.model.js";
-import validateObjectId from "../../shared/utils/ValidateObjectId.js";
-import ApiResponse from "../../shared/utils/ApiResponse.js";
-import asyncHandler from "../../shared/utils/asyncHandler.js";
-import ApiError from "../../shared/utils/ApiError.js";
+import { validateObjectId } from "../../shared/utils/validation.utils.js";
+import { ApiResponse } from "../../shared/utils/api.utils.js";
+import { asyncHandler } from "../../shared/utils/api.utils.js";
+import { ApiError } from "../../shared/utils/api.utils.js";
 
 const getProductId = (productRef) => {
     if (!productRef) return null;

@@ -4,10 +4,11 @@ import OrderItem from './order-item.model.js';
 import Cart from '../cart/cart.model.js';
 import Product from '../products/product.model.js';
 import Address from '../address/address.model.js';
-import asyncHandler from '../../shared/utils/asyncHandler.js';
-import ApiError from '../../shared/utils/ApiError.js';
+import { asyncHandler } from '../../shared/utils/api.utils.js';
+import { ApiError } from '../../shared/utils/api.utils.js';
 import { createAndSendInvoice } from '../invoice/invoice.service.js';
 import { ROLES } from '../../shared/constants/roles.js';
+import { sendDeliveryOTP, verifyDeliveryOTP } from '../../shared/services/delivery-otp.service.js';
 
 const DELIVERY_CHARGE = 50;
 const FREE_DELIVERY_ABOVE = 50_000;
@@ -31,14 +32,19 @@ function calcDeliveryCharge(subtotal, type = 'standard') {
  * @access  Private
  */
 export const placeOrder = asyncHandler(async (req, res) => {
-    const { addressId, paymentMethod = 'cod', notes, deliveryType = 'standard' } = req.body;
+    // Defaulting to 'online' as COD is temporarily disabled for production readiness
+    const { addressId, paymentMethod = 'online', notes, deliveryType = 'standard' } = req.body;
 
     if (!addressId) throw new ApiError(400, 'Delivery address is required');
 
-    // ✅ FIX: Was only allowing 'cod' — blocked Razorpay 'online' payments
-    const VALID_METHODS = ['cod', 'online'];
+    // Currently only 'online' is active. 'cod' is kept in VALID_METHODS but restricted via a check.
+    const VALID_METHODS = ['online', 'cod']; 
     if (!VALID_METHODS.includes(paymentMethod)) {
         throw new ApiError(400, `paymentMethod must be one of: ${VALID_METHODS.join(', ')}`);
+    }
+
+    if (paymentMethod === 'cod') {
+        throw new ApiError(403, 'Cash on Delivery (COD) is temporarily disabled. Please use Online Payment via Razorpay.');
     }
 
     const address = await Address.findOne({ _id: addressId, user: req.user._id });
@@ -192,21 +198,23 @@ export const placeOrder = asyncHandler(async (req, res) => {
                 createdOrders.push(newOrder);
             }
 
-            await Promise.all(
-                stockUpdates.map(({ id, quantity }) =>
-                    Product.findByIdAndUpdate(
-                        id,
-                        { $inc: { quantityAvailable: -quantity } },
-                        { session }
+            if (paymentMethod === 'cod') {
+                await Promise.all(
+                    stockUpdates.map(({ id, quantity }) =>
+                        Product.findByIdAndUpdate(
+                            id,
+                            { $inc: { quantityAvailable: -quantity } },
+                            { session }
+                        )
                     )
-                )
-            );
+                );
 
-            await Cart.findOneAndUpdate(
-                { user: req.user._id },
-                { $set: { items: [], totalPrice: 0, totalItems: 0 } },
-                { session }
-            );
+                await Cart.findOneAndUpdate(
+                    { user: req.user._id },
+                    { $set: { items: [], totalPrice: 0, totalItems: 0 } },
+                    { session }
+                );
+            }
         });
     } finally {
         session.endSession();
@@ -384,16 +392,8 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
 
     if (!status) throw new ApiError(400, 'Status is required');
 
-    if (status === 'cancelled') {
-        throw new ApiError(403, 'Vendors are not permitted to cancel orders. Only users or admins possess cancellation rights.');
-    }
-
-    const VENDOR_ALLOWED = ['confirmed', 'processing', 'shipped', 'out_for_delivery', 'delivered'];
-    if (!VENDOR_ALLOWED.includes(status)) {
-        throw new ApiError(
-            400,
-            `Vendors can only set the following statuses: ${VENDOR_ALLOWED.join(', ')}`
-        );
+    if (status === 'delivered') {
+        throw new ApiError(400, 'Directly marking order as "delivered" is not allowed. Please use the OTP verification endpoint for secure delivery confirmation.');
     }
 
     const order = await Order.findById(req.params.orderId);
@@ -413,6 +413,16 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
         throw new ApiError(400, err.message);
     }
 
+    // --- OTP TRIGGER ---
+    if (status === 'out_for_delivery') {
+        try {
+            await sendDeliveryOTP(order._id);
+        } catch (otpErr) {
+            console.error(`[OTP] Auto-send failed for ${order.orderNumber}:`, otpErr.message);
+            // Non-blocking for the status update
+        }
+    }
+
     // Update individual items belonging to this vendor
     await OrderItem.updateMany(
         { order_id: order._id, vendor: req.user._id },
@@ -421,8 +431,78 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
 
     res.status(200).json({
         success: true,
-        message: `Order status updated to "${status}"`,
+        message: `Order status updated to "${status}"${status === 'out_for_delivery' ? ' and Delivery OTP sent to customer.' : ''}`,
         data: { order },
+    });
+});
+
+/**
+ * @desc    Verify delivery OTP and mark order as delivered
+ * @route   POST /api/v1/orders/:orderId/verify-delivery-otp
+ * @access  Private (Vendor/Admin)
+ */
+export const verifyDeliveryOrder = asyncHandler(async (req, res) => {
+    const { otp } = req.body;
+    const { orderId } = req.params;
+
+    if (!otp) throw new ApiError(400, 'OTP is required');
+
+    const order = await Order.findById(orderId);
+    if (!order) throw new ApiError(404, 'Order not found');
+
+    if (order.status !== 'out_for_delivery') {
+        throw new ApiError(400, `OTP verification is only allowed for orders with status "out_for_delivery". Current: "${order.status}"`);
+    }
+
+    // Auth check: Vendor must have items in this order or be Admin
+    if (req.user.role === ROLES.VENDOR) {
+        const hasItem = await OrderItem.exists({ order_id: order._id, vendor: req.user._id });
+        if (!hasItem) throw new ApiError(403, 'Access denied. You have no items in this order.');
+    }
+
+    // 1. Verify OTP
+    await verifyDeliveryOTP(orderId, otp);
+
+    // 2. Mark items belonging to this vendor as delivered
+    const updateFilter = { order_id: order._id };
+    if (req.user.role === ROLES.VENDOR) {
+        updateFilter.vendor = req.user._id;
+    }
+    
+    await OrderItem.updateMany(
+        updateFilter,
+        { $set: { itemStatus: 'delivered' } }
+    );
+
+    // 3. Check if ALL items in the order are now delivered
+    const allItems = await OrderItem.find({ order_id: order._id });
+    const isFullyDelivered = allItems.every(item => item.itemStatus === 'delivered' || item.itemStatus === 'cancelled');
+
+    if (isFullyDelivered) {
+        await order.updateStatus(
+            'delivered', 
+            'All items delivered. Order completed via OTP verification.', 
+            req.user.role === ROLES.ADMIN ? 'admin' : 'vendor'
+        );
+    } else {
+        // Just add a history entry that this vendor's items were delivered
+        order.statusHistory.push({
+            status: order.status, // keep current status (probably 'out_for_delivery' or 'shipped')
+            changedBy: req.user.role === ROLES.ADMIN ? 'admin' : 'vendor',
+            note: `Items for ${req.user.role === ROLES.VENDOR ? 'vendor ' + req.user.fullName : 'admin'} delivered via OTP.`
+        });
+        await order.save();
+    }
+
+    res.status(200).json({
+        success: true,
+        message: isFullyDelivered 
+            ? 'Order fully delivered successfully via OTP verification' 
+            : 'Vendor items delivered successfully. Awaiting other items in this order.',
+        data: { 
+            order,
+            isFullyDelivered
+        }
     });
 });
 

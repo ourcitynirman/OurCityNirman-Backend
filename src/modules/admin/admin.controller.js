@@ -3,9 +3,10 @@ import Product from '../products/product.model.js';
 import Order from '../orders/order.model.js';
 import OrderItem from '../orders/order-item.model.js';
 import Shop from '../shop/shop.model.js';
-import ApiError from '../../shared/utils/ApiError.js';
-import asyncHandler from '../../shared/utils/asyncHandler.js';
+import { ApiError } from '../../shared/utils/api.utils.js';
+import { asyncHandler } from '../../shared/utils/api.utils.js';
 import { ROLES } from '../../shared/constants/roles.js';
+import { createAuditLog } from '../../shared/utils/audit.utils.js';
 
 
 
@@ -121,6 +122,13 @@ const blockUnblockUser = asyncHandler(async (req, res) => {
     user.isActive = !user.isActive;
     await user.save();
 
+    await createAuditLog(req, {
+        action: user.isActive ? 'UNBLOCK_USER' : 'BLOCK_USER',
+        resourceType: 'User',
+        resourceId: user._id,
+        details: `${user.isActive ? 'Unblocked' : 'Blocked'} account for ${user.email}`
+    });
+
     res.status(200).json({
         success: true,
         message: `User ${user.isActive ? 'unblocked' : 'blocked'} successfully`,
@@ -147,11 +155,19 @@ const deleteUser = asyncHandler(async (req, res) => {
         throw new ApiError(403, 'Cannot delete another admin');
     }
 
+    const emailBefore = user.email;
     user.isActive = false;
     user.$isDeleted = true;
     user.email = `deleted_${user._id}@removed.com`;
     user.phone = null;
     await user.save();
+
+    await createAuditLog(req, {
+        action: 'DELETE_USER',
+        resourceType: 'User',
+        resourceId: user._id,
+        details: `Soft-deleted user account: ${emailBefore}`
+    });
 
     res.status(200).json({
         success: true,
@@ -245,6 +261,13 @@ const verifyVendor = asyncHandler(async (req, res) => {
         { vendor: user._id },
         { isVerified: true }
     );
+
+    await createAuditLog(req, {
+        action: 'VERIFY_VENDOR',
+        resourceType: 'User',
+        resourceId: user._id,
+        details: `Verified vendor account: ${user.email}`
+    });
 
     res.status(200).json({
         success: true,
@@ -353,6 +376,13 @@ const approveProduct = asyncHandler(async (req, res) => {
     product.isActive = true;
     await product.save();
 
+    await createAuditLog(req, {
+        action: 'APPROVE_PRODUCT',
+        resourceType: 'Product',
+        resourceId: product._id,
+        details: `Approved product: ${product.name}`
+    });
+
     res.status(200).json({
         success: true,
         message: 'Product approved successfully',
@@ -377,6 +407,13 @@ const blockProduct = asyncHandler(async (req, res) => {
     product.isApproved = false;
     if (reason) product.blockReason = reason;
     await product.save();
+
+    await createAuditLog(req, {
+        action: 'BLOCK_PRODUCT',
+        resourceType: 'Product',
+        resourceId: product._id,
+        details: `Blocked product: ${product.name}. Reason: ${reason || 'Not specified'}`
+    });
 
     res.status(200).json({
         success: true,
