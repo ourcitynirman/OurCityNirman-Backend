@@ -1,11 +1,20 @@
 {
   "name": "ourcitynirman_backend",
   "version": "1.0.0",
-  "description": "backend for ourcitynirman project",
+  "description": "Backend for OurCityNirman — Real estate & home services marketplace",
   "type": "module",
-  "main": "index.js",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
-    "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js"
+    "dev": "cross-env NODE_ENV=development nodemon src/index.js",
+    "start": "cross-env NODE_ENV=production node src/index.js",
+    "pm2:start": "cross-env NODE_ENV=production pm2 start ecosystem.config.cjs --env production",
+    "pm2:stop": "pm2 stop ourcitynirman-backend",
+    "pm2:logs": "pm2 logs ourcitynirman-backend",
+    "pm2:restart": "pm2 restart ourcitynirman-backend",
+    "lint": "node --check src/app.js src/routes.js"
   },
   "keywords": [
     "Our City Nirman Pvt. Ltd."
@@ -22,6 +31,7 @@
     "cloudinary": "^2.9.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "cross-env": "^10.1.0",
     "crypto": "^1.0.1",
     "dotenv": "^16.3.1",
     "express": "^5.2.1",

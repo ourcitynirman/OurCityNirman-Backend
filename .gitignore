@@ -69,10 +69,10 @@ web_modules/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variables file
+# Environment files (NEVER commit real secrets)
 .env
-.env.test
-.env.production
+.env.*
+!.env.example
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -118,3 +118,18 @@ dist
 .pnp.*
 
 # End of https://mrkandreev.name/snippets/gitignore-generator/#Node
+# Application logs
+logs/
+*.log
+
+# Temp uploads
+public/temp/
+
+# Test artifacts
+http-test.mjs
+verify-routes.mjs
+
+# Docker
+.dockerignore
+Dockerfile
+
