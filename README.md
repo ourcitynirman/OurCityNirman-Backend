@@ -1,7 +1,4 @@
 # OurCityNirman API Documentation
-
-यह Document Frontend Developers के लिए है। इसमें सभी Modules के API Endpoints, उनका काम (Description), Route Path, और Access Level (कौन इसे इस्तेमाल कर सकता है) की जानकारी दी गई है।
-
 ---
 
 ## 📍 Address Module
