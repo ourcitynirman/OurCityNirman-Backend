@@ -35,7 +35,8 @@ export const placeOrder = asyncHandler(async (req, res) => {
 
     if (!addressId) throw new ApiError(400, 'Delivery address is required');
 
-    const VALID_METHODS = ['cod'];
+    // ✅ FIX: Was only allowing 'cod' — blocked Razorpay 'online' payments
+    const VALID_METHODS = ['cod', 'online'];
     if (!VALID_METHODS.includes(paymentMethod)) {
         throw new ApiError(400, `paymentMethod must be one of: ${VALID_METHODS.join(', ')}`);
     }

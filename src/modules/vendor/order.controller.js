@@ -3,6 +3,7 @@ import OrderItem from '../orders/order-item.model.js';
 import Shop from '../shop/shop.model.js';
 import Product from '../products/product.model.js';
 import ApiError from '../../shared/utils/ApiError.js';
+import { sendDeliveryOTP } from '../../shared/services/Delivery.otp.service.js';
 
 
 
@@ -135,6 +136,15 @@ export async function updateOrderStatus(req, res, next) {
                 order.paymentStatus = 'paid';
             }
             await order.save();
+        }
+
+        // ✅ Auto-send delivery OTP when order moves to 'out_for_delivery'
+        // Non-blocking: email failure does NOT roll back the status update
+        if (status === 'out_for_delivery') {
+            sendDeliveryOTP(order._id)
+            .catch(err =>
+                console.error(`[OTP] Auto-send failed for order ${order.orderNumber}:`, err.message)
+            );
         }
 
         // Sync individual items
