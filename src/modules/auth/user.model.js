@@ -93,7 +93,7 @@ userSchema.pre("save", async function () {
     
     if (isAlreadyHashed) return;
 
-    this.password = await bcrypt.hash(this.password, 10);
+    this.password = await bcrypt.hash(this.password, 12);
 });
 
 

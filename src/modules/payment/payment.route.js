@@ -12,16 +12,16 @@ const PaymentRouter = Router();
 PaymentRouter.use(authenticate);
 
 /**
- * @desc    Create a new Razorpay order for payment processing
+ * @desc    Create a new Razorpay order for secure checkout processing
  * @route   POST /api/v1/payments/razorpay/create
- * @access  Private
+ * @access  Private (All Roles)
  */
 PaymentRouter.post('/razorpay/create', authorize(...ALL_ROLES), createRazorpayOrder);
 
 /**
- * @desc    Verify Razorpay payment signature
+ * @desc    Verify Razorpay payment signature after successful transaction
  * @route   POST /api/v1/payments/razorpay/verify
- * @access  Private
+ * @access  Private (All Roles)
  */
 PaymentRouter.post('/razorpay/verify', authorize(...ALL_ROLES), verifyRazorpayPayment);
 

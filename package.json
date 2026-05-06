@@ -33,9 +33,11 @@
     "cors": "^2.8.5",
     "cross-env": "^10.1.0",
     "crypto": "^1.0.1",
+    "csurf": "^1.11.0",
     "dotenv": "^16.3.1",
     "express": "^5.2.1",
     "express-async-handler": "^1.2.0",
+    "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^8.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
@@ -52,6 +54,7 @@
     "twilio": "^5.11.1",
     "uniqid": "^5.4.0",
     "winston": "^3.19.0",
+    "xss-clean": "^0.1.4",
     "zod": "^4.3.6"
   }
 }

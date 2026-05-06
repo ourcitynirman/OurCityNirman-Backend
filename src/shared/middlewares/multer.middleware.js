@@ -3,13 +3,13 @@
 import multer from "multer";
 import fs from "fs";
 import path from "path";
+import logger from "../utils/logger.js";
 
 
 const TEMP_DIR = "./public/temp";
 
 if (!fs.existsSync(TEMP_DIR)) {
     fs.mkdirSync(TEMP_DIR, { recursive: true });
-    // console.log(" Created temp upload folder:", TEMP_DIR);
 }
 
 
@@ -29,8 +29,21 @@ const storage = multer.diskStorage({
 });
 
 
+const allowedMimeTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "application/pdf",
+    "video/mp4",
+];
+
 const fileFilter = (req, file, cb) => {
-    cb(null, true);
+    if (allowedMimeTypes.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error(`Invalid file type: ${file.mimetype}. Only JPEG, PNG, WEBP, GIF, PDF, and MP4 are allowed.`), false);
+    }
 };
 
 
@@ -51,7 +64,7 @@ export const cleanupTempFile = (filePath) => {
             fs.unlinkSync(filePath);
         }
     } catch (err) {
-        console.warn(`[Multer] Could not delete temp file "${filePath}":`, err.message);
+        logger.warn(`[Multer] Could not delete temp file "${filePath}":`, { error: err.message });
     }
 };
 

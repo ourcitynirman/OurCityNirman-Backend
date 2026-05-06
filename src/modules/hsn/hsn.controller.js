@@ -1,88 +1,43 @@
-import HSN from './hsn.model.js';
 import { asyncHandler } from '../../shared/utils/api.utils.js';
 import { ApiError } from '../../shared/utils/api.utils.js';
 import { ApiResponse } from '../../shared/utils/api.utils.js';
-import mongoose from 'mongoose';
+import HSNService from './hsn.service.js';
+import { createHSNSchema, getAllHSNQuerySchema, idParamSchema, updateHSNSchema, bulkInsertHSNSchema } from './hsn.validation.js';
 
 /**
  * @desc    Create a new HSN record
  * @route   POST /api/v1/hsn
  * @access  Private (Admin)
  */
-export const createHSN = asyncHandler(async (req, res) => {
-    const { hsn_code, description, category, gst_rate, unit } = req.body;
-
-    if (!hsn_code || !category || gst_rate === undefined || !unit) {
-        throw new ApiError(400, "Missing required fields: hsn_code, category, gst_rate, and unit are required.");
+export const createHSN = asyncHandler(async (req, res, next) => {
+    try {
+        const validatedData = createHSNSchema.parse(req.body);
+        const hsn = await HSNService.createHSN(validatedData);
+        return res.status(201).json(new ApiResponse(201, hsn, "HSN record created successfully"));
+    } catch (err) {
+        if (err.name === 'ZodError') {
+            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+        }
+        next(err);
     }
-
-    const existingHSN = await HSN.findOne({ hsn_code: hsn_code.toUpperCase() });
-    if (existingHSN) {
-        throw new ApiError(409, `HSN code ${hsn_code} already exists.`);
-    }
-
-    const hsn = await HSN.create({
-        hsn_code,
-        description,
-        category,
-        gst_rate,
-        unit
-    });
-
-    return res.status(201).json(
-        new ApiResponse(201, hsn, "HSN record created successfully")
-    );
 });
 
 /**
- * @desc    Get all HSN records with pagination, search, and filtering
+ * @desc    Get all HSN records
  * @route   GET /api/v1/hsn
  * @access  Public
  */
-export const getAllHSN = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10, search, gst_rate, category, sort } = req.query;
-
-    const query = { is_active: true };
-
-    if (search) {
-        query.hsn_code = { $regex: search, $options: 'i' };
+export const getAllHSN = asyncHandler(async (req, res, next) => {
+    try {
+        const queryData = getAllHSNQuerySchema.parse(req.query);
+        const result = await HSNService.getAllHSN(queryData);
+        return res.status(200).json(new ApiResponse(200, result, "HSN records fetched successfully"));
+    } catch (err) {
+        if (err.name === 'ZodError') {
+            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+        }
+        next(err);
     }
-
-    if (gst_rate) {
-        query.gst_rate = Number(gst_rate);
-    }
-
-    if (category) {
-        query.category = category;
-    }
-
-    const sortOption = {};
-    if (sort === 'gst_rate') {
-        sortOption.gst_rate = 1;
-    } else {
-        sortOption.createdAt = -1;
-    }
-
-    const hsnRecords = await HSN.find(query)
-        .populate('category', 'name slug')
-        .sort(sortOption)
-        .skip((page - 1) * limit)
-        .limit(Number(limit))
-        .lean();
-
-    const total = await HSN.countDocuments(query);
-
-    return res.status(200).json(
-        new ApiResponse(200, {
-            hsnRecords,
-            pagination: {
-                total,
-                page: Number(page),
-                limit: Number(limit),
-                totalPages: Math.ceil(total / limit)
-            }
-        }, "HSN records fetched successfully")
-    );
 });
 
 /**
@@ -90,22 +45,17 @@ export const getAllHSN = asyncHandler(async (req, res) => {
  * @route   GET /api/v1/hsn/:id
  * @access  Public
  */
-export const getHSNById = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        throw new ApiError(400, "Invalid HSN ID format");
+export const getHSNById = asyncHandler(async (req, res, next) => {
+    try {
+        const { id } = idParamSchema.parse(req.params);
+        const hsn = await HSNService.getHSNById(id);
+        return res.status(200).json(new ApiResponse(200, hsn, "HSN record fetched successfully"));
+    } catch (err) {
+        if (err.name === 'ZodError') {
+            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+        }
+        next(err);
     }
-
-    const hsn = await HSN.findById(id).populate('category', 'name slug').lean();
-
-    if (!hsn) {
-        throw new ApiError(404, "HSN record not found");
-    }
-
-    return res.status(200).json(
-        new ApiResponse(200, hsn, "HSN record fetched successfully")
-    );
 });
 
 /**
@@ -113,38 +63,18 @@ export const getHSNById = asyncHandler(async (req, res) => {
  * @route   PUT /api/v1/hsn/:id
  * @access  Private (Admin)
  */
-export const updateHSN = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const { hsn_code, description, category, gst_rate, unit, is_active } = req.body;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        throw new ApiError(400, "Invalid HSN ID format");
-    }
-
-    const hsn = await HSN.findById(id);
-    if (!hsn) {
-        throw new ApiError(404, "HSN record not found");
-    }
-
-    if (hsn_code && hsn_code.toUpperCase() !== hsn.hsn_code) {
-        const existing = await HSN.findOne({ hsn_code: hsn_code.toUpperCase() });
-        if (existing) {
-            throw new ApiError(409, `HSN code ${hsn_code} already exists.`);
+export const updateHSN = asyncHandler(async (req, res, next) => {
+    try {
+        const { id } = idParamSchema.parse(req.params);
+        const validatedData = updateHSNSchema.parse(req.body);
+        const hsn = await HSNService.updateHSN(id, validatedData);
+        return res.status(200).json(new ApiResponse(200, hsn, "HSN record updated successfully"));
+    } catch (err) {
+        if (err.name === 'ZodError') {
+            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
         }
-        hsn.hsn_code = hsn_code;
+        next(err);
     }
-
-    if (description !== undefined) hsn.description = description;
-    if (category) hsn.category = category;
-    if (gst_rate !== undefined) hsn.gst_rate = gst_rate;
-    if (unit) hsn.unit = unit;
-    if (is_active !== undefined) hsn.is_active = is_active;
-
-    await hsn.save();
-
-    return res.status(200).json(
-        new ApiResponse(200, hsn, "HSN record updated successfully")
-    );
 });
 
 /**
@@ -152,26 +82,17 @@ export const updateHSN = asyncHandler(async (req, res) => {
  * @route   DELETE /api/v1/hsn/:id
  * @access  Private (Admin)
  */
-export const deleteHSN = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        throw new ApiError(400, "Invalid HSN ID format");
+export const deleteHSN = asyncHandler(async (req, res, next) => {
+    try {
+        const { id } = idParamSchema.parse(req.params);
+        await HSNService.deleteHSN(id);
+        return res.status(200).json(new ApiResponse(200, null, "HSN record deactivated successfully"));
+    } catch (err) {
+        if (err.name === 'ZodError') {
+            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+        }
+        next(err);
     }
-
-    const hsn = await HSN.findByIdAndUpdate(
-        id,
-        { $set: { is_active: false } },
-        { new: true }
-    );
-
-    if (!hsn) {
-        throw new ApiError(404, "HSN record not found");
-    }
-
-    return res.status(200).json(
-        new ApiResponse(200, null, "HSN record deactivated successfully")
-    );
 });
 
 /**
@@ -179,25 +100,17 @@ export const deleteHSN = asyncHandler(async (req, res) => {
  * @route   POST /api/v1/hsn/bulk
  * @access  Private (Admin)
  */
-export const bulkInsertHSN = asyncHandler(async (req, res) => {
-    const { hsn_list } = req.body;
-
-    if (!Array.isArray(hsn_list) || hsn_list.length === 0) {
-        throw new ApiError(400, "Invalid input: hsn_list must be a non-empty array.");
-    }
-
-    // Basic validation for bulk insert
-    for (const item of hsn_list) {
-        if (!item.hsn_code || !item.category || item.gst_rate === undefined || !item.unit) {
-            throw new ApiError(400, `Item with HSN code ${item.hsn_code || 'unknown'} is missing required fields.`);
+export const bulkInsertHSN = asyncHandler(async (req, res, next) => {
+    try {
+        const { hsn_list } = bulkInsertHSNSchema.parse(req.body);
+        const result = await HSNService.bulkInsertHSN(hsn_list);
+        return res.status(201).json(new ApiResponse(201, result, `${result.length} HSN records inserted successfully`));
+    } catch (err) {
+        if (err.name === 'ZodError') {
+            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
         }
+        next(err);
     }
-
-    const result = await HSN.insertMany(hsn_list, { ordered: false });
-
-    return res.status(201).json(
-        new ApiResponse(201, result, `${result.length} HSN records inserted successfully`)
-    );
 });
 
 /**
@@ -205,22 +118,15 @@ export const bulkInsertHSN = asyncHandler(async (req, res) => {
  * @route   PATCH /api/v1/hsn/:id/toggle-status
  * @access  Private (Admin)
  */
-export const toggleHSNStatus = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        throw new ApiError(400, "Invalid HSN ID format");
+export const toggleHSNStatus = asyncHandler(async (req, res, next) => {
+    try {
+        const { id } = idParamSchema.parse(req.params);
+        const hsn = await HSNService.toggleHSNStatus(id);
+        return res.status(200).json(new ApiResponse(200, hsn, `HSN record ${hsn.is_active ? 'activated' : 'deactivated'} successfully`));
+    } catch (err) {
+        if (err.name === 'ZodError') {
+            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+        }
+        next(err);
     }
-
-    const hsn = await HSN.findById(id);
-    if (!hsn) {
-        throw new ApiError(404, "HSN record not found");
-    }
-
-    hsn.is_active = !hsn.is_active;
-    await hsn.save();
-
-    return res.status(200).json(
-        new ApiResponse(200, hsn, `HSN record ${hsn.is_active ? 'activated' : 'deactivated'} successfully`)
-    );
 });

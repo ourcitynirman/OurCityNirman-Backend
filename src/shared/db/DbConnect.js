@@ -27,14 +27,14 @@ const connectDB = async () => {
     };
 
     // Handle connection events
-    mongoose.connection.on('connected',    () => console.log('🟢  MongoDB connected'));
+    mongoose.connection.on('connected', () => console.log('🟢  MongoDB connected'));
     mongoose.connection.on('disconnected', () => console.warn('🔴  MongoDB disconnected'));
-    mongoose.connection.on('error',        (err) => console.error('🔴  MongoDB error:', err.message));
+    mongoose.connection.on('error', (err) => console.error('🔴  MongoDB error:', err.message));
 
     await mongoose.connect(uri, options);
 
     const { host, name } = mongoose.connection;
-    console.log(`📦  Database: ${name}  (${host})`);
+    console.log(`  Database Mode${name}  (${host})`);
 };
 
 export default connectDB;

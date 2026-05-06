@@ -1,42 +1,25 @@
-
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+// 1. Load environment variables
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const userSchema = new mongoose.Schema(
-    {
-        fullName: { type: String, required: true },
-        email: { type: String, required: true, unique: true, lowercase: true },
-        phone: { type: String, required: true, unique: true },
-        password: { type: String, required: true },
-        role: {
-            type: String,
-            enum: ['user', 'vendor', 'homeowner', 'labour', 'admin'],
-            default: 'user',
-        },
-        isVerified: { type: Boolean, default: false },
-        isActive: { type: Boolean, default: false },
-        refreshToken: { type: String, select: false },
-    },
-    { timestamps: true }
-);
+// 2. Import the actual User model and Constants
+import { User } from '../src/modules/auth/user.model.js';
+import { DB_NAME } from '../src/constants.js';
+import { ROLES } from '../src/shared/constants/roles.js';
 
-const User = mongoose.models.User || mongoose.model('User', userSchema);
-
-// Admin credentials 
-const ADMIN = {
+// 3. Admin credentials 
+const ADMIN_DATA = {
     fullName: 'Diwakar Gupta',
     email: 'ourcitynirman@gmail.com',
     phone: '8553866059',
     password: 'India@12',
-    role: 'admin',
+    role: ROLES.ADMIN,
     isVerified: true,
     isActive: true,
 };
@@ -49,34 +32,43 @@ async function main() {
     }
 
     console.log('🔌  Connecting to MongoDB…');
-    await mongoose.connect(uri);
-    console.log('  Connected');
+    try {
+        await mongoose.connect(uri, { dbName: DB_NAME });
+        console.log(`✅  Connected to database: ${DB_NAME}`);
 
-    // Check if admin already exists
-    const existing = await User.findOne({ email: ADMIN.email });
-    if (existing) {
-        console.log(`   Admin already exists  ${ADMIN.email}`);
-        console.log('     Delete it from the DB first if you want to re-seed.');
+        // Check if admin already exists
+        const existing = await User.findOne({ email: ADMIN_DATA.email.toLowerCase() });
+        
+        if (existing) {
+            console.log(`ℹ️  Admin already exists: ${ADMIN_DATA.email}`);
+            console.log('🔄  Updating password and status to ensure access...');
+            
+            existing.password = ADMIN_DATA.password; // Model pre-save hook will hash this
+            existing.isVerified = true;
+            existing.isActive = true;
+            existing.role = ROLES.ADMIN;
+            
+            await existing.save();
+            console.log('✅  Admin account updated successfully.');
+        } else {
+            console.log(`🆕  Creating new admin: ${ADMIN_DATA.email}`);
+            // We pass the raw password; the User model's pre-save hook in user.model.js handles hashing
+            await User.create(ADMIN_DATA);
+            console.log('✅  Admin account created successfully.');
+        }
+
+        console.log('\n--- Admin Credentials ---');
+        console.log(`Email    : ${ADMIN_DATA.email}`);
+        console.log(`Password : ${ADMIN_DATA.password}`);
+        console.log(`Role     : ${ADMIN_DATA.role}`);
+        console.log('--------------------------\n');
+
+    } catch (error) {
+        console.error('❌  Operation failed:', error.message);
+    } finally {
         await mongoose.disconnect();
         process.exit(0);
     }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(ADMIN.password, 10);
-
-    await User.create({ ...ADMIN, password: hashedPassword });
-
-
-    console.log(`  Email    : ${ADMIN.email}`);
-    console.log(`  Password : ${ADMIN.password}`);
-    console.log(`  Role     : ${ADMIN.role}`);
-
-
-    await mongoose.disconnect();
-    process.exit(0);
 }
 
-main().catch((err) => {
-    console.error('Seed failed:', err.message);
-    process.exit(1);
-});
+main();

@@ -8,12 +8,13 @@ import {
 
 const RefundRouter = Router();
 
-// All refund routes require authentication
+// Apply authentication to all refund routes
 RefundRouter.use(authenticate);
 
 /**
+ * @desc    Process a refund for a delivered order via Razorpay API
  * @route   POST /api/v1/refunds/:orderId
- * @desc    Process a refund for an order (Admin Only)
+ * @access  Private (Admin Only)
  */
 RefundRouter.post(
     '/:orderId',
@@ -22,8 +23,9 @@ RefundRouter.post(
 );
 
 /**
+ * @desc    Retrieve detailed refund information for a specific order
  * @route   GET /api/v1/refunds/:orderId
- * @desc    Get refund details for an order (Admin or Owner)
+ * @access  Private (Admin or Order Owner)
  */
 RefundRouter.get(
     '/:orderId',

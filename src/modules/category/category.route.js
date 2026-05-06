@@ -15,7 +15,9 @@ import { upload } from "../../shared/middlewares/multer.middleware.js";
 
 const router = Router();
 
-// --- PUBLIC ROUTES ---
+// =============================================================================
+//                              PUBLIC ROUTES
+// =============================================================================
 
 /**
  * @desc    Get all root-level categories (top of the hierarchy)
@@ -46,41 +48,43 @@ router.get("/:parentId/children", getChildrenCategories);
 router.get("/:id/breadcrumb", getCategoryBreadcrumb);
 
 
-// --- ADMIN MANAGEMENT ROUTES ---
+// =============================================================================
+//                           ADMIN MANAGEMENT ROUTES
+// =============================================================================
 
 /**
- * @desc    Create a new category (Admin Only)
+ * @desc    Create a new category with optional image upload
  * @route   POST /api/v1/categories
  * @access  Private (Admin)
  */
 router.post("/", verifyJWT, authorize("admin"), upload.single("image"), createCategory);
 
 /**
- * @desc    Update existing category details or image
+ * @desc    Update existing category details or replace image
  * @route   PATCH /api/v1/categories/:id
  * @access  Private (Admin)
  */
 router.patch("/:id", verifyJWT, authorize("admin"), upload.single("image"), updateCategory);
 
 /**
- * @desc    Toggle category active/inactive status (affects visibility)
+ * @desc    Toggle category active/inactive status (affects storefront visibility)
  * @route   PATCH /api/v1/categories/:id/toggle
  * @access  Private (Admin)
  */
 router.patch("/:id/toggle", verifyJWT, authorize("admin"), toggleCategoryStatus);
 
 /**
- * @desc    Delete a category and handle its children (recursive logic)
+ * @desc    Delete a category and handle its children recursively
  * @route   DELETE /api/v1/categories/:id
  * @access  Private (Admin)
  */
 router.delete("/:id", verifyJWT, authorize("admin"), deleteCategory);
 
 /**
- * @desc    Get performance and inventory statistics for a category
+ * @desc    Get performance and inventory statistics for a specific category
  * @route   GET /api/v1/categories/:id/stats
  * @access  Private (Admin)
  */
-router.get("/id/stats", verifyJWT, authorize("admin"), getCategoryStats);
+router.get("/:id/stats", verifyJWT, authorize("admin"), getCategoryStats);
 
 export default router;

@@ -1,39 +1,25 @@
-import Invoice from "./invoice.model.js";
-import { User } from "../auth/user.model.js";
-import Order from "../orders/order.model.js";
-import OrderItem from "../orders/order-item.model.js";
 import { asyncHandler } from "../../shared/utils/api.utils.js";
 import { ApiError } from "../../shared/utils/api.utils.js";
 import { ApiResponse } from "../../shared/utils/api.utils.js";
-import { createAndSendInvoice } from "./invoice.service.js";
-import { ROLES } from "../../shared/constants/roles.js";
+import InvoiceService from "./invoice.service.js";
+import { getMyInvoicesQuerySchema, orderIdParamSchema, invoiceIdParamSchema } from "./invoice.validation.js";
 
 /**
  * @desc    Get all invoices for the currently logged-in user
  * @route   GET /api/v1/invoice/my-invoices
  * @access  Private
  */
-export const getMyInvoices = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10 } = req.query;
-
-    const invoices = await Invoice.find({ user: req.user._id })
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(Number(limit));
-
-    const total = await Invoice.countDocuments({ user: req.user._id });
-
-    return res.status(200).json(
-        new ApiResponse(200, {
-            invoices,
-            pagination: {
-                total,
-                page: Number(page),
-                limit: Number(limit),
-                pages: Math.ceil(total / limit)
-            }
-        }, "Invoices fetched successfully")
-    );
+export const getMyInvoices = asyncHandler(async (req, res, next) => {
+    try {
+        const { page, limit } = getMyInvoicesQuerySchema.parse(req.query);
+        const result = await InvoiceService.getMyInvoices(req.user._id, page, limit);
+        return res.status(200).json(new ApiResponse(200, result, "Invoices fetched successfully"));
+    } catch (err) {
+        if (err.name === 'ZodError') {
+            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+        }
+        next(err);
+    }
 });
 
 /**
@@ -41,45 +27,17 @@ export const getMyInvoices = asyncHandler(async (req, res) => {
  * @route   GET /api/v1/invoice/order/:orderId
  * @access  Private (Owner/Vendor/Admin)
  */
-export const getInvoiceByOrder = asyncHandler(async (req, res) => {
-    const { orderId } = req.params;
-
-    // Check if user is purchaser, vendor of this order, or admin
-    const order = await Order.findById(orderId);
-    if (!order) throw new ApiError(404, "Order not found");
-
-    const isPurchaser = order.user.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === ROLES.ADMIN;
-    
-    // Check vendor access via OrderItem
-    const isVendor = await OrderItem.exists({ order_id: orderId, vendor: req.user._id });
-
-    if (!isPurchaser && !isVendor && !isAdmin) {
-        throw new ApiError(403, "Access denied to this order's invoice");
-    }
-
-    let invoice = await Invoice.findOne({ order: orderId });
-    
-    if (!invoice) {
-        // Only generate if user is purchaser or admin
-        if (!isPurchaser && !isAdmin) {
-            throw new ApiError(404, "Invoice not generated yet");
+export const getInvoiceByOrder = asyncHandler(async (req, res, next) => {
+    try {
+        const { orderId } = orderIdParamSchema.parse(req.params);
+        const result = await InvoiceService.getInvoiceByOrder(orderId, req.user);
+        return res.status(200).json(new ApiResponse(200, result, "Invoice fetched successfully"));
+    } catch (err) {
+        if (err.name === 'ZodError') {
+            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
         }
-
-        const customer = await User.findById(order.user);
-        if (!customer) throw new ApiError(404, "Customer not found for this order");
-
-        const result = await createAndSendInvoice(order, customer);
-        if (result.success) {
-            invoice = result.invoice;
-        } else {
-            throw new ApiError(500, `Failed to generate invoice on demand: ${result.error}`);
-        }
+        next(err);
     }
-
-    return res.status(200).json(
-        new ApiResponse(200, invoice, "Invoice fetched successfully")
-    );
 });
 
 /**
@@ -87,40 +45,17 @@ export const getInvoiceByOrder = asyncHandler(async (req, res) => {
  * @route   GET /api/v1/invoice/:invoiceId/download
  * @access  Private (Owner/Vendor/Admin)
  */
-export const downloadInvoice = asyncHandler(async (req, res) => {
-    const { invoiceId } = req.params;
-
-    const invoice = await Invoice.findById(invoiceId);
-    if (!invoice) throw new ApiError(404, "Invoice not found");
-
-    const order = await Order.findById(invoice.order);
-    if (!order) throw new ApiError(404, "Ordering information missing");
-
-    const isPurchaser = order.user.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === ROLES.ADMIN;
-    
-    // Check vendor access via OrderItem
-    const isVendor = await OrderItem.exists({ order_id: order._id, vendor: req.user._id });
-
-    if (!isPurchaser && !isVendor && !isAdmin) {
-        throw new ApiError(403, "Access denied to download this invoice");
-    }
-
-    if (!invoice.pdfUrl) {
-        // Fallback: regenerate if missing and user is purchaser/admin
-        if (!isPurchaser && !isAdmin) {
-            throw new ApiError(404, "Invoice PDF not available");
+export const downloadInvoice = asyncHandler(async (req, res, next) => {
+    try {
+        const { invoiceId } = invoiceIdParamSchema.parse(req.params);
+        const pdfUrl = await InvoiceService.getInvoicePdfUrl(invoiceId, req.user);
+        return res.redirect(pdfUrl);
+    } catch (err) {
+        if (err.name === 'ZodError') {
+            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
         }
-        
-        const customer = await User.findById(order.user);
-        if (!customer) throw new ApiError(404, "Customer not found");
-
-        const result = await createAndSendInvoice(order, customer);
-        if (!result.success) throw new ApiError(500, "Failed to regenerate invoice");
-        return res.redirect(result.pdfUrl);
+        next(err);
     }
-
-    return res.redirect(invoice.pdfUrl);
 });
 
 /**
@@ -128,28 +63,17 @@ export const downloadInvoice = asyncHandler(async (req, res) => {
  * @route   GET /api/v1/invoice/:invoiceId/view
  * @access  Private (Owner/Vendor/Admin)
  */
-export const viewInvoice = asyncHandler(async (req, res) => {
-    const { invoiceId } = req.params;
-
-    const invoice = await Invoice.findById(invoiceId);
-    if (!invoice) throw new ApiError(404, "Invoice not found");
-
-    const order = await Order.findById(invoice.order);
-    if (!order) throw new ApiError(404, "Order info invalid");
-
-    const isPurchaser = order.user.toString() === req.user._id.toString();
-    const isAdmin = req.user.role === ROLES.ADMIN;
-    
-    // Check vendor access via OrderItem
-    const isVendor = await OrderItem.exists({ order_id: order._id, vendor: req.user._id });
-
-    if (!isPurchaser && !isVendor && !isAdmin) {
-        throw new ApiError(403, "Access denied to view this invoice");
+export const viewInvoice = asyncHandler(async (req, res, next) => {
+    try {
+        const { invoiceId } = invoiceIdParamSchema.parse(req.params);
+        const result = await InvoiceService.viewInvoice(invoiceId, req.user);
+        return res.status(200).json(new ApiResponse(200, result, "Invoice details fetched"));
+    } catch (err) {
+        if (err.name === 'ZodError') {
+            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+        }
+        next(err);
     }
-
-    return res.status(200).json(
-        new ApiResponse(200, invoice, "Invoice details fetched")
-    );
 });
 
 /**
@@ -157,30 +81,15 @@ export const viewInvoice = asyncHandler(async (req, res) => {
  * @route   POST /api/v1/invoice/:invoiceId/resend-email
  * @access  Private (Owner/Admin)
  */
-export const resendInvoiceEmail = asyncHandler(async (req, res) => {
-    const { invoiceId } = req.params;
-
-    const invoice = await Invoice.findById(invoiceId);
-    if (!invoice) throw new ApiError(404, "Invoice not found");
-
-    const order = await Order.findById(invoice.order);
-    if (!order) throw new ApiError(404, "Order not found");
-
-    // Only purchaser or admin can resend to user email
-    if (order.user.toString() !== req.user._id.toString() && req.user.role !== ROLES.ADMIN) {
-        throw new ApiError(403, "Access denied: Only the purchaser or admin can trigger email resends");
+export const resendInvoiceEmail = asyncHandler(async (req, res, next) => {
+    try {
+        const { invoiceId } = invoiceIdParamSchema.parse(req.params);
+        await InvoiceService.resendInvoiceEmail(invoiceId, req.user);
+        return res.status(200).json(new ApiResponse(200, null, "Invoice email resent successfully"));
+    } catch (err) {
+        if (err.name === 'ZodError') {
+            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+        }
+        next(err);
     }
-
-    const customer = await User.findById(order.user);
-    if (!customer) throw new ApiError(404, "Customer not found");
-
-    const result = await createAndSendInvoice(order, customer);
-
-    if (!result.success) {
-        throw new ApiError(500, "Failed to resend invoice");
-    }
-
-    return res.status(200).json(
-        new ApiResponse(200, null, "Invoice email resent successfully")
-    );
 });

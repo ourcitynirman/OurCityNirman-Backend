@@ -4,6 +4,7 @@ import { User } from "../../modules/auth/user.model.js";
 import { ApiError, asyncHandler } from "../utils/api.utils.js";
 import Product from "../../modules/products/product.model.js";
 import { ROLES } from "../constants/roles.js";
+import logger from "../utils/logger.js";
 
 const extractToken = (req) => {
   if (req.cookies?.accessToken) {
@@ -77,7 +78,7 @@ const verifyJWT = asyncHandler(async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    console.error("verifyJWT error:", error.message);
+    logger.error("verifyJWT error:", { error: error.message });
     return res
       .status(401)
       .json({ success: false, message: "Authentication failed" });
@@ -139,7 +140,7 @@ const authenticate = asyncHandler(async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    console.error("authenticate error:", error.message);
+    logger.error("authenticate error:", { error: error.message });
     return next(new ApiError(401, "Authentication failed"));
   }
   
@@ -289,7 +290,7 @@ const verifyRefreshToken = asyncHandler(async (req, res, next) => {
     req.user = { id: userId, _id: userId };
     next();
   } catch (error) {
-    console.error("verifyRefreshToken error:", error.message);
+    logger.error("verifyRefreshToken error:", { error: error.message });
     return next(new ApiError(500, "Token verification failed"));
   }
 });
@@ -316,7 +317,7 @@ const verifyProductOwner = asyncHandler(async (req, res, next) => {
     req.product = product;
     next();
   } catch (err) {
-    console.error("verifyProductOwner error:", err.message);
+    logger.error("verifyProductOwner error:", { error: err.message });
     return next(new ApiError(500, "Internal Server Error"));
   }
 });

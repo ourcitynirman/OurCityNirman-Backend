@@ -11,7 +11,6 @@ import {
 
 const router = express.Router();
 
-
 const settingsUpdateLimiter = rateLimit({
     windowMs:        15 * 60 * 1000,
     max:             5,
@@ -23,10 +22,12 @@ const settingsUpdateLimiter = rateLimit({
     },
 });
 
-
+// =============================================================================
+//                              VENDOR SETTINGS
+// =============================================================================
 
 /**
- * @desc    Get currently logged-in vendor's account and notification settings
+ * @desc    Get account and notification preferences for the logged-in vendor
  * @route   GET /api/v1/settings/me
  * @access  Private (Vendor)
  */
@@ -38,7 +39,7 @@ router.get(
 );
 
 /**
- * @desc    Update currently logged-in vendor's account and notification settings
+ * @desc    Update account and notification preferences for the logged-in vendor
  * @route   PATCH /api/v1/settings/me
  * @access  Private (Vendor)
  */
@@ -51,8 +52,12 @@ router.patch(
 );
 
 
+// =============================================================================
+//                              ADMIN MANAGEMENT
+// =============================================================================
+
 /**
- * @desc    Get account and notification settings for a specific user ID
+ * @desc    Get account and notification preferences for a specific user ID
  * @route   GET /api/v1/settings/:userId
  * @access  Private (Admin)
  */
@@ -64,7 +69,7 @@ router.get(
 );
 
 /**
- * @desc    Update account and notification settings for a specific user ID
+ * @desc    Force update account and notification preferences for a specific user
  * @route   PATCH /api/v1/settings/:userId
  * @access  Private (Admin)
  */

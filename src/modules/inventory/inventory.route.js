@@ -4,18 +4,18 @@ import { verifyJWT, authorize } from '../../shared/middlewares/auth.middleware.j
 
 const router = Router();
 
-// All inventory routes are protected
+// Apply global JWT verification for all inventory routes
 router.use(verifyJWT);
 
 /**
- * @desc    Get inventory status for a specific product
+ * @desc    Get real-time inventory status for a specific product
  * @route   GET /api/v1/inventory/:productId
  * @access  Private (Owner/Admin)
  */
 router.get('/:productId', getInventoryByProduct);
 
 /**
- * @desc    Update stock levels for a specific product
+ * @desc    Update stock levels and log inventory adjustments
  * @route   PATCH /api/v1/inventory/:productId
  * @access  Private (Owner/Admin/Vendor)
  */

@@ -12,54 +12,62 @@ import { authenticate, authorize } from '../../shared/middlewares/auth.middlewar
 
 const router = Router();
 
-// --- PUBLIC ROUTES ---
+// =============================================================================
+//                              PUBLIC ROUTES
+// =============================================================================
+
 /**
- * @desc    Get all HSN codes with pagination and search
+ * @desc    Get paginated list of HSN codes with GST rate and unit info
  * @route   GET /api/v1/hsn
  * @access  Public
  */
 router.get('/', getAllHSN);
 
 /**
- * @desc    Get details of a specific HSN code
+ * @desc    Get detailed information for a specific HSN code
  * @route   GET /api/v1/hsn/:id
  * @access  Public
  */
 router.get('/:id', getHSNById);
 
-// --- PRIVATE ROUTES (Admin Only) ---
+
+// =============================================================================
+//                              ADMIN MANAGEMENT
+// =============================================================================
+
+// Apply administrative restrictions for write operations
 router.use(authenticate, authorize('admin'));
 
 /**
- * @desc    Create a new HSN code
+ * @desc    Create a new HSN record for product classification
  * @route   POST /api/v1/hsn
  * @access  Private (Admin)
  */
 router.post('/', createHSN);
 
 /**
- * @desc    Bulk insert multiple HSN codes from a JSON list
+ * @desc    Bulk import HSN records from a JSON collection
  * @route   POST /api/v1/hsn/bulk
  * @access  Private (Admin)
  */
 router.post('/bulk', bulkInsertHSN);
 
 /**
- * @desc    Update an existing HSN code details
+ * @desc    Update an existing HSN record's GST rate or description
  * @route   PUT /api/v1/hsn/:id
  * @access  Private (Admin)
  */
 router.put('/:id', updateHSN);
 
 /**
- * @desc    Toggle HSN code active/inactive status
+ * @desc    Toggle HSN record status (active/inactive)
  * @route   PATCH /api/v1/hsn/:id/toggle-status
  * @access  Private (Admin)
  */
 router.patch('/:id/toggle-status', toggleHSNStatus);
 
 /**
- * @desc    Delete an HSN code from the database
+ * @desc    Permanently delete an HSN record from the database
  * @route   DELETE /api/v1/hsn/:id
  * @access  Private (Admin)
  */

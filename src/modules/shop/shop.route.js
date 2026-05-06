@@ -19,6 +19,7 @@ import {
     adminDeactivateShop,
     requestVerification,
     getMyVerificationStatus,
+    getShopMetadata,
     adminGetVerificationRequests,
     adminGetVerificationDetail,
 } from "./shop.controller.js";
@@ -60,6 +61,13 @@ ShopRouter.get("/slug/:slug",     getShopBySlug);
  * @access  Public
  */
 ShopRouter.get("/code/:shopCode", getShopByCode);
+
+/**
+ * @desc    Get common shop metadata (Store types, Finance options, Days)
+ * @route   GET /api/v1/shop/metadata
+ * @access  Public
+ */
+ShopRouter.get("/metadata",       getShopMetadata);
 
 // --- PROTECTED ROUTES (Requires Login) ---
 

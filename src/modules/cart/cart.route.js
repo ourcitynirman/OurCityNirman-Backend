@@ -19,7 +19,7 @@ CartRouter.use(authenticate, authorize(...ALL_ROLES));
  * @route   GET /api/v1/user/cart/
  * @access  Private
  */
-CartRouter.get("/",                                getCart);
+CartRouter.get("/", getCart);
 
 /**
  * @desc    Add a product to shopping cart
@@ -33,7 +33,7 @@ CartRouter.post("/items",                          addToCart);
  * @route   PATCH /api/v1/user/cart/items/:productId
  * @access  Private
  */
-CartRouter.patch("/items/:productId",              updateCartItem);
+CartRouter.patch("/items/:productId", updateCartItem);
 
 /**
  * @desc    Remove an item from shopping cart

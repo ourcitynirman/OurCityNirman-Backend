@@ -1,23 +1,7 @@
-import Address from './address.model.js';
+import AddressService from './address.service.js';
 import { ApiError } from '../../shared/utils/api.utils.js';
+import { addAddressSchema, updateAddressSchema, bulkAddressSchema } from './address.validation.js';
 
-const MAX_ADDRESSES = 10;
-
-const ALLOWED_UPDATE_FIELDS = [
-    'addressType', 'fullName', 'phone',
-    'line1', 'line2', 'landmark', 'village',
-    'city', 'state', 'pincode', 'country', 'isDefault',
-];
-
-
-async function findUserAddress(addressId, userId) {
-    const address = await Address.findOne({ _id: addressId, user: userId });
-    if (!address) throw new ApiError('Address not found', 404);
-    return address;
-}
-
-
-// addresses
 /**
  * @desc    Get all saved addresses for the current user
  * @route   GET /api/v1/user/address/
@@ -25,7 +9,7 @@ async function findUserAddress(addressId, userId) {
  */
 export async function getAddresses(req, res, next) {
     try {
-        const addresses = await Address.getUserAddresses(req.user._id);
+        const addresses = await AddressService.getUserAddresses(req.user._id);
 
         res.status(200).json({
             success: true,
@@ -37,13 +21,6 @@ export async function getAddresses(req, res, next) {
     }
 }
 
-
-// addresses 
-const ALLOWED_CREATE_FIELDS = [
-    'addressType', 'fullName', 'phone', 'alternatePhone', 'email',
-    'line1', 'line2', 'landmark', 'village',
-    'city', 'state', 'pincode', 'country', 'isDefault',
-];
 /**
  * @desc    Add a new address to user profile
  * @route   POST /api/v1/user/address/add
@@ -51,22 +28,9 @@ const ALLOWED_CREATE_FIELDS = [
  */
 export async function addAddress(req, res, next) {
     try {
-        const count = await Address.countUserAddresses(req.user._id);
+        const validatedData = addAddressSchema.parse(req.body);
 
-        if (count >= MAX_ADDRESSES) {
-            return next(new ApiError(`You can only save up to ${MAX_ADDRESSES} addresses`, 400));
-        }
-
-                const filtered = {};
-        ALLOWED_CREATE_FIELDS.forEach((field) => {
-            if (req.body[field] !== undefined) filtered[field] = req.body[field];
-        });
-
-        const address = await Address.create({
-            ...filtered,
-            user: req.user._id,                     
-            isDefault: filtered.isDefault ?? count === 0,
-        });
+        const address = await AddressService.addAddress(req.user._id, validatedData);
 
         res.status(201).json({
             success: true,
@@ -74,11 +38,13 @@ export async function addAddress(req, res, next) {
             data: { address },
         });
     } catch (err) {
+        if (err.name === 'ZodError') {
+            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+        }
         next(err);
     }
 }
 
-// addresses 
 /**
  * @desc    Add multiple addresses in bulk
  * @route   POST /api/v1/user/address/bulk
@@ -86,31 +52,9 @@ export async function addAddress(req, res, next) {
  */
 export async function addMultipleAddresses(req, res, next) {
     try {
-        const { addresses } = req.body;
+        const validatedData = bulkAddressSchema.parse(req.body);
 
-        if (!Array.isArray(addresses) || addresses.length === 0) {
-            return next(new ApiError('addresses must be a non-empty array', 400));
-        }
-
-        const existing = await Address.countUserAddresses(req.user._id);
-
-        if (existing + addresses.length > MAX_ADDRESSES) {
-            return next(
-                new ApiError(
-                    `Adding ${addresses.length} address(es) would exceed the limit of ${MAX_ADDRESSES}. You currently have ${existing}.`,
-                    400
-                )
-            );
-        }
-
-        const payload = addresses.map((addr, i) => ({
-            ...addr,
-            user: req.user._id,
-            isDefault: existing === 0 && i === 0,
-        }));
-
-
-        const created = await Address.insertMany(payload, { ordered: false });
+        const created = await AddressService.addMultipleAddresses(req.user._id, validatedData.addresses);
 
         res.status(201).json({
             success: true,
@@ -118,11 +62,12 @@ export async function addMultipleAddresses(req, res, next) {
             data: { addresses: created, count: created.length },
         });
     } catch (err) {
+        if (err.name === 'ZodError') {
+            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+        }
         next(err);
     }
 }
-
-
 
 /**
  * @desc    Get details of a specific address by ID
@@ -131,7 +76,7 @@ export async function addMultipleAddresses(req, res, next) {
  */
 export async function getAddress(req, res, next) {
     try {
-        const address = await findUserAddress(req.params.id, req.user._id);
+        const address = await AddressService.findUserAddress(req.params.id, req.user._id);
 
         res.status(200).json({
             success: true,
@@ -141,8 +86,6 @@ export async function getAddress(req, res, next) {
         next(err);
     }
 }
-
-
 
 /**
  * @desc    Update an existing address
@@ -151,14 +94,9 @@ export async function getAddress(req, res, next) {
  */
 export async function updateAddress(req, res, next) {
     try {
-        const address = await findUserAddress(req.params.id, req.user._id);
+        const validatedData = updateAddressSchema.parse(req.body);
 
-        ALLOWED_UPDATE_FIELDS.forEach((field) => {
-            if (req.body[field] !== undefined) address[field] = req.body[field];
-        });
-
-
-        await address.save();
+        const address = await AddressService.updateAddress(req.params.id, req.user._id, validatedData);
 
         res.status(200).json({
             success: true,
@@ -166,10 +104,12 @@ export async function updateAddress(req, res, next) {
             data: { address },
         });
     } catch (err) {
+        if (err.name === 'ZodError') {
+            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+        }
         next(err);
     }
 }
-
 
 /**
  * @desc    Delete an address
@@ -178,30 +118,17 @@ export async function updateAddress(req, res, next) {
  */
 export async function deleteAddress(req, res, next) {
     try {
-        const address = await Address.findOneAndDelete({
-            _id: req.params.id,
-            user: req.user._id,
-        });
-
-        if (!address) return next(new ApiError('Address not found', 404));
-
-
-        if (address.isDefault) {
-            const next_ = await Address.findOne({ user: req.user._id }).sort({ createdAt: -1 });
-            if (next_) await next_.setAsDefault();
-        }
+        const deletedId = await AddressService.deleteAddress(req.params.id, req.user._id);
 
         res.status(200).json({
             success: true,
             message: 'Address deleted successfully',
-            data: { deletedId: req.params.id },
+            data: { deletedId },
         });
     } catch (err) {
         next(err);
     }
 }
-
-
 
 /**
  * @desc    Set an address as default
@@ -210,22 +137,11 @@ export async function deleteAddress(req, res, next) {
  */
 export async function setDefaultAddress(req, res, next) {
     try {
-        const address = await findUserAddress(req.params.id, req.user._id);
-
-        if (address.isDefault) {
-            return res.status(200).json({
-                success: true,
-                message: 'Address is already the default',
-                data: { address },
-            });
-        }
-
-
-        await address.setAsDefault();
+        const address = await AddressService.setDefaultAddress(req.params.id, req.user._id);
 
         res.status(200).json({
             success: true,
-            message: 'Default address updated',
+            message: address.isDefault ? 'Default address updated' : 'Address is already the default', // This ternary will always be true since we return the updated address
             data: { address },
         });
     } catch (err) {

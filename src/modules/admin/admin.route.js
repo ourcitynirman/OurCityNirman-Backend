@@ -31,126 +31,137 @@ import { authenticate, authorize } from '../../shared/middlewares/auth.middlewar
 
 const AdminRouter = Router();
 
+// Apply administrative restrictions globally
 AdminRouter.use(authenticate);
 AdminRouter.use(authorize('admin'));
 
-// --- DASHBOARD ---
+// =============================================================================
+//                              DASHBOARD & REPORTS
+// =============================================================================
 
 /**
- * @desc    Get administrative dashboard statistics
+ * @desc    Get real-time platform overview statistics for the admin dashboard
  * @route   GET /api/v1/admin/stats
  * @access  Private (Admin)
  */
 AdminRouter.get('/stats', getDashboardStats);
 
 /**
- * @desc    Get detailed platform financial performance reports
+ * @desc    Generate comprehensive financial reports and transaction summaries
  * @route   GET /api/v1/admin/reports/finance
  * @access  Private (Admin)
  */
 AdminRouter.get('/reports/finance', getFinancialReport);
 
-// --- USER MANAGEMENT ---
+// =============================================================================
+//                              USER MANAGEMENT
+// =============================================================================
 
 /**
- * @desc    Get list of all users with filters
+ * @desc    Get paginated list of all platform users with advanced filters
  * @route   GET /api/v1/admin/users
  * @access  Private (Admin)
  */
 AdminRouter.get('/users', getUsers);
 
 /**
- * @desc    Get detailed user profile by ID
+ * @desc    Get full profile details and activity for a specific user
  * @route   GET /api/v1/admin/users/:id
  * @access  Private (Admin)
  */
 AdminRouter.get('/users/:id', getUserById);
 
 /**
- * @desc    Block or unblock a user account
+ * @desc    Toggle account access (Block/Unblock) for a specific user
  * @route   PATCH /api/v1/admin/users/:id/block
  * @access  Private (Admin)
  */
 AdminRouter.patch('/users/:id/block', blockUnblockUser);
 
 /**
- * @desc    Permanently delete a user account
+ * @desc    Permanently delete a user account and purge related data
  * @route   DELETE /api/v1/admin/users/:id
  * @access  Private (Admin)
  */
 AdminRouter.delete('/users/:id', deleteUser);
 
-// --- VENDOR MANAGEMENT ---
+// =============================================================================
+//                              VENDOR MANAGEMENT
+// =============================================================================
 
 /**
- * @desc    Get list of all registered vendors
+ * @desc    Get paginated list of all registered vendors and their status
  * @route   GET /api/v1/admin/vendors
  * @access  Private (Admin)
  */
 AdminRouter.get('/vendors', getVendors);
 
 /**
- * @desc    Verify a vendor's account status
+ * @desc    Verify vendor identity and shop documents to enable selling
  * @route   PATCH /api/v1/admin/vendors/:id/verify
  * @access  Private (Admin)
  */
 AdminRouter.patch('/vendors/:id/verify', verifyVendor);
 
 /**
- * @desc    Block or unblock a vendor account
+ * @desc    Toggle platform access (Block/Unblock) for a vendor
  * @route   PATCH /api/v1/admin/vendors/:id/block
  * @access  Private (Admin)
  */
 AdminRouter.patch('/vendors/:id/block', blockVendor);
 
-// --- PRODUCT MODERATION ---
+// =============================================================================
+//                              PRODUCT MODERATION
+// =============================================================================
 
 /**
- * @desc    Get list of all products (for moderation)
+ * @desc    Get list of all platform products for quality control and moderation
  * @route   GET /api/v1/admin/products
  * @access  Private (Admin)
  */
 AdminRouter.get('/products', getAdminProducts);
 
 /**
- * @desc    Approve a pending product listing
+ * @desc    Approve a pending product listing for storefront visibility
  * @route   PATCH /api/v1/admin/products/:id/approve
  * @access  Private (Admin)
  */
 AdminRouter.patch('/products/:id/approve', approveProduct);
 
 /**
- * @desc    Approve multiple pending products in a single batch
+ * @desc    Bulk approve multiple pending product listings in one request
  * @route   PATCH /api/v1/admin/products/bulk-approve
  * @access  Private (Admin)
  */
 AdminRouter.patch('/products/bulk-approve', bulkApproveProducts);
 
 /**
- * @desc    Block a product listing
+ * @desc    Block a product listing due to policy violations or quality issues
  * @route   PATCH /api/v1/admin/products/:id/block
  * @access  Private (Admin)
  */
 AdminRouter.patch('/products/:id/block', blockProduct);
 
-// --- ORDER ADMINISTRATION ---
+// =============================================================================
+//                              ORDER ADMINISTRATION
+// =============================================================================
 
 /**
- * @desc    Get list of all platform orders
+ * @desc    Get global list of all orders across the platform
  * @route   GET /api/v1/admin/orders
  * @access  Private (Admin)
  */
 AdminRouter.get('/orders', getAdminOrders);
 
 /**
- * @desc    Get full details of a specific order
+ * @desc    Get full lifecycle and tracking details for a specific order
  * @route   GET /api/v1/admin/orders/:id
  * @access  Private (Admin)
  */
 AdminRouter.get('/orders/:id', getAdminOrderById);
 
 /**
- * @desc    Override order status manually
+ * @desc    Override order lifecycle status manually (Emergency use)
  * @route   PATCH /api/v1/admin/orders/:id/status
  * @access  Private (Admin)
  */

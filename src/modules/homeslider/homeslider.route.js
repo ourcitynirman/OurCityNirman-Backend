@@ -13,7 +13,7 @@ import {
     bulkUpdateSlides,
     deleteSlide,
     permanentDeleteSlide,
-} from "./Homeslider.controller.js";
+} from "./homeslider.controller.js";
 
 import { authorize, verifyJWT } from "../../shared/middlewares/auth.middleware.js";
 import { upload } from "../../shared/middlewares/multer.middleware.js";
@@ -36,81 +36,93 @@ const imageUpload = upload.fields([{ name: "image", maxCount: 1 }]);
 
 const SliderRoute = express.Router();
 
+// =============================================================================
+//                              PUBLIC ROUTES
+// =============================================================================
+
 /**
- * @desc    Get all active slider images for the homepage
+ * @desc    Fetch all active and ordered slider slides for the homepage
  * @route   GET /api/v1/slider/slides
  * @access  Public
  */
 SliderRoute.get('/slides', publicLimiter, getActiveSlides);
 
+
+// =============================================================================
+//                              ADMIN MANAGEMENT
+// =============================================================================
+
+// Apply administrative restrictions for all management routes
+SliderRoute.use(verifyJWT, authorize('admin'));
+
 /**
- * @desc    Reorder slides sequence
+ * @desc    Update the display sequence (order) of homepage slides
  * @route   PATCH /api/v1/slider/admin/slides/reorder
  * @access  Private (Admin)
  */
-SliderRoute.patch('/admin/slides/reorder', verifyJWT, authorize('admin'), reorderSlides);
+SliderRoute.patch('/admin/slides/reorder', reorderSlides);
 
 /**
- * @desc    Bulk update multiple slides (status, duration, etc.)
+ * @desc    Bulk update slide properties (status, display duration, etc.)
  * @route   PATCH /api/v1/slider/admin/slides/bulk-update
  * @access  Private (Admin)
  */
-SliderRoute.patch('/admin/slides/bulk-update', verifyJWT, authorize('admin'), bulkUpdateSlides);
+SliderRoute.patch('/admin/slides/bulk-update', bulkUpdateSlides);
 
 /**
- * @desc    Get slider performance and inventory statistics
+ * @desc    Get detailed slider inventory and performance statistics
  * @route   GET /api/v1/slider/admin/slides/stats
  * @access  Private (Admin)
  */
-SliderRoute.get('/admin/slides/stats', verifyJWT, authorize('admin'), getSlideStats);
+SliderRoute.get('/admin/slides/stats', getSlideStats);
 
 /**
- * @desc    Get list of all slides (including inactive)
+ * @desc    Get comprehensive list of all slides (Active & Inactive)
  * @route   GET /api/v1/slider/admin/slides
  * @access  Private (Admin)
  */
-SliderRoute.get('/admin/slides', verifyJWT, authorize('admin'), getAllSlides);
+SliderRoute.get('/admin/slides', getAllSlides);
 
 /**
- * @desc    Create a new homepage slider
+ * @desc    Create a new homepage slider with image upload
  * @route   POST /api/v1/slider/admin/slides
  * @access  Private (Admin)
  */
-SliderRoute.post('/admin/slides', verifyJWT, authorize('admin'), adminWriteLimiter, imageUpload, createSlide);
+SliderRoute.post('/admin/slides', adminWriteLimiter, imageUpload, createSlide);
 
 /**
- * @desc    Get details of a specific slide
+ * @desc    Retrieve full details for a specific homepage slide
  * @route   GET /api/v1/slider/admin/slides/:id
  * @access  Private (Admin)
  */
-SliderRoute.get('/admin/slides/:id', verifyJWT, authorize('admin'), getSlideById);
+SliderRoute.get('/admin/slides/:id', getSlideById);
 
 /**
- * @desc    Update slide details or replace image
+ * @desc    Update slide metadata or replace the slider image
  * @route   PUT /api/v1/slider/admin/slides/:id
  * @access  Private (Admin)
  */
-SliderRoute.put('/admin/slides/:id', verifyJWT, authorize('admin'), imageUpload, updateSlide);
+SliderRoute.put('/admin/slides/:id', imageUpload, updateSlide);
 
 /**
- * @desc    Soft delete (deactivate) a slide
+ * @desc    Soft delete a slide (move to inactive)
  * @route   DELETE /api/v1/slider/admin/slides/:id
  * @access  Private (Admin)
  */
-SliderRoute.delete('/admin/slides/:id', verifyJWT, authorize('admin'), deleteSlide);
+SliderRoute.delete('/admin/slides/:id', deleteSlide);
 
 /**
- * @desc    Toggle slide active/inactive status
+ * @desc    Toggle a slide's visibility status (Active/Inactive)
  * @route   PATCH /api/v1/slider/admin/slides/:id/toggle
  * @access  Private (Admin)
  */
-SliderRoute.patch('/admin/slides/:id/toggle', verifyJWT, authorize('admin'), toggleSlideStatus);
+SliderRoute.patch('/admin/slides/:id/toggle', toggleSlideStatus);
 
 /**
- * @desc    Permanently delete a slide and its Cloudinary assets
+ * @desc    Permanently delete a slide and purge its Cloudinary assets
  * @route   DELETE /api/v1/slider/admin/slides/:id/permanent
  * @access  Private (Admin)
  */
-SliderRoute.delete('/admin/slides/:id/permanent', verifyJWT, authorize('admin'), permanentDeleteSlide);
+SliderRoute.delete('/admin/slides/:id/permanent', permanentDeleteSlide);
 
 export default SliderRoute;

@@ -10,14 +10,18 @@ import cookieParser from 'cookie-parser';
 import helmet       from 'helmet';
 import morgan       from 'morgan';
 import rateLimit    from 'express-rate-limit';
-import dotenv       from 'dotenv';
+// import mongoSanitize from 'express-mongo-sanitize';
+// import xss          from 'xss-clean';
+// import csurf        from 'csurf';
+// import dotenv       from 'dotenv'; // Handled in index.js
 
 import { registerRoutes } from './routes.js';
 import errorHandler       from './shared/middlewares/Errorhandler.middleware.js';
 
 import logger from './shared/utils/logger.js';
 
-dotenv.config();
+// dotenv.config(); // Handled in index.js
+
 
 const app = express();
 
@@ -62,6 +66,8 @@ app.use(cors({
         callback(new Error(`CORS policy: origin "${origin}" is not allowed.`));
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'Accept', 'Origin'],
 }));
 
 // ─── SECURITY HEADERS (Helmet) ───────────────────────────────────────────────
@@ -109,6 +115,41 @@ app.use(
 app.use(express.json({ limit: '16kb' }));
 app.use(express.urlencoded({ extended: true, limit: '16kb' }));
 app.use(cookieParser());
+
+// // ─── DATA SANITIZATION ─────────────────────────────────────────────────────
+// // Data sanitization against NoSQL query injection
+// app.use(mongoSanitize());
+
+// // Data sanitization against XSS
+// app.use(xss());
+
+// // ─── CSRF PROTECTION ────────────────────────────────────────────────────────
+// // csurf is deprecated and can cause issues with Postman/development. 
+// // For production, ensure you have a robust CSRF strategy if using cookies.
+// /*
+// const csrfProtection = csurf({
+//     cookie: {
+//         httpOnly: true,
+//         secure: process.env.NODE_ENV === 'production',
+//         sameSite: 'strict',
+//     }
+// });
+
+// // Exclude webhooks from CSRF if needed, else apply to all API routes
+// app.use((req, res, next) => {
+//     // Skip CSRF for webhooks (e.g. Razorpay/Stripe)
+//     if (req.path.startsWith('/api/v1/payments/webhook')) {
+//         return next();
+//     }
+//     csrfProtection(req, res, next);
+// });
+
+// // CSRF Token Provider Endpoint
+// app.get('/api/v1/csrf-token', (req, res) => {
+//     res.status(200).json({ success: true, csrfToken: req.csrfToken() });
+// });
+// */
+
 app.use(express.static('public'));
 
 // ─── API ROUTES ──────────────────────────────────────────────────────────────
