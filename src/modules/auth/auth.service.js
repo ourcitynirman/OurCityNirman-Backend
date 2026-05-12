@@ -206,13 +206,21 @@ class AuthService {
             const decoded = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
             const user = await User.findById(decoded._id).select("+refreshToken");
 
-            if (!user) throw new ApiError(401, "Invalid refresh token");
-            if (incomingRefreshToken !== user.refreshToken) throw new ApiError(401, "Refresh token is expired or used");
+            if (!user) {
+                logger.warn(`Refresh failed: User ${decoded._id} not found`);
+                throw new ApiError(401, "Invalid refresh token");
+            }
+
+            if (incomingRefreshToken !== user.refreshToken) {
+                logger.warn(`Refresh failed: Token mismatch for user ${user._id}. Possible token reuse or secret change.`);
+                throw new ApiError(401, "Refresh token is expired or used");
+            }
 
             const { accessToken, refreshToken: newRefreshToken } = await generateAccessAndRefreshTokens(user._id);
 
             return { accessToken, refreshToken: newRefreshToken };
         } catch (error) {
+            logger.error(`Refresh token error: ${error.message}`);
             throw new ApiError(401, error?.message || "Invalid refresh token");
         }
     }

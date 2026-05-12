@@ -17,8 +17,8 @@ const getCookieOptions = () => {
     const isProduction = process.env.NODE_ENV === "production";
     return {
         httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? "strict" : "lax",
+        secure: isProduction || process.env.PROTOCOL === 'https', // Force secure if on https
+        sameSite: "lax", // 'lax' is more reliable than 'strict' for many production deployments
         path: "/",
     };
 };
