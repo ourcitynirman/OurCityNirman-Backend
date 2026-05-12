@@ -21,8 +21,11 @@ const PORT = parseInt(process.env.PORT, 10) || 5000;
 connectDB()
     .then(() => {
         const server = app.listen(PORT, () => {
-            console.log(`\n⚙️  Server  →  http://localhost:${PORT}  [${process.env.NODE_ENV}]`);
-            console.log(`🔗  Health  →  http://localhost:${PORT}/api/v1/health`);
+            const isProd = process.env.NODE_ENV === 'production';
+            const base = isProd ? (process.env.FRONTEND_URL || 'https://www.ourcitynirman.com').replace(/\/$/, '') : `http://localhost:${PORT}`;
+            
+            console.log(`\n⚙️  Server  →  ${base}  [${process.env.NODE_ENV}]`);
+            console.log(`🔗  Health  →  ${base}/api/v1/health`);
             console.log(`🚀  Backend reloaded at: ${new Date().toLocaleTimeString()}\n`);
         });
 
