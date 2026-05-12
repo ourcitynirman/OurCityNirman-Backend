@@ -31,8 +31,8 @@ export const includeInactiveQuerySchema = z.object({
 export const createCategorySchema = z.object({
     name: z.string().trim().min(1, "Name is required").max(100, "Name cannot exceed 100 characters"),
     description: z.string().trim().max(1000, "Description cannot exceed 1000 characters").optional().nullable(),
-    image: z.string().optional().nullable(),
-    icon: z.string().optional().nullable(),
+    image: z.any().optional().nullable(),
+    icon: z.any().optional().nullable(),
     parent: objectIdSchema.optional().nullable(),
     sortOrder: z.preprocess((val) => (val !== undefined ? Number(val) : 0), z.number().int().optional()),
 });
@@ -40,8 +40,8 @@ export const createCategorySchema = z.object({
 export const updateCategorySchema = z.object({
     name: z.string().trim().min(1, "Name cannot be empty").max(100).optional(),
     description: z.string().trim().max(1000).optional().nullable(),
-    image: z.string().optional().nullable(),
-    icon: z.string().optional().nullable(),
+    image: z.any().optional().nullable(),
+    icon: z.any().optional().nullable(),
     parent: objectIdSchema.optional().nullable(),
     sortOrder: z.preprocess((val) => (val !== undefined ? Number(val) : undefined), z.number().int().optional()),
     isActive: z.preprocess((val) => {

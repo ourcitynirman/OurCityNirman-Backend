@@ -86,14 +86,15 @@ class CategoryService {
             throw new ApiError(400, `Category with name "${name}" already exists`);
         }
 
-        let imgUrl = image || null;
+        // Only use 'image' from body if it's a string (URL)
+        let imgUrl = typeof image === 'string' ? image : null;
         if (file) {
             const upload = await uploadOnCloudinary(file.path);
             if (upload?.success) imgUrl = upload.url;
         }
 
         const category = await Category.create({
-            name, description, image: imgUrl, icon,
+            name, description, image: imgUrl, icon: typeof icon === 'string' ? icon : null,
             parent: parent || null,
             sortOrder: sortOrder || 0
         });
@@ -118,7 +119,7 @@ class CategoryService {
         
         if (body.description !== undefined) category.description = body.description;
         if (body.isActive !== undefined) category.isActive = body.isActive;
-        if (body.icon !== undefined) category.icon = body.icon;
+        if (body.icon !== undefined && typeof body.icon === 'string') category.icon = body.icon;
         if (body.sortOrder !== undefined) category.sortOrder = body.sortOrder;
 
         let parentChanged = false;
@@ -130,14 +131,14 @@ class CategoryService {
             }
         }
 
-        if (file || body.image) {
+        if (file || (body.image !== undefined && typeof body.image === 'string')) {
             const oldId = getPublicId(category.image);
             if (oldId) await deleteFromCloudinary(oldId);
 
             if (file) {
                 const upload = await uploadOnCloudinary(file.path);
                 if (upload?.success) category.image = upload.url;
-            } else {
+            } else if (typeof body.image === 'string') {
                 category.image = body.image;
             }
         }
