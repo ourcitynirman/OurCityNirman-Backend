@@ -27,7 +27,7 @@ connectDB()
             console.log(`\n⚙️  Server  →  ${base}  [${process.env.NODE_ENV}]`);
             console.log(`🔗  Health  →  ${base}/api/v1/health`);
             console.log(`🚀  Backend reloaded at: ${new Date().toLocaleTimeString()}\n`);
-        });
+        }); 
 
 
         // ── Graceful Shutdown ──────────────────────────────────────────────
