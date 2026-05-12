@@ -153,8 +153,7 @@ const productSchema = new mongoose.Schema({
 // Wildcard index for dynamic specifications filtering
 productSchema.index({ "specifications.$**": 1 });
 
-
-// OPTIMIZE INDEXES
+// OPTIMIZE COMPOUND INDEXES (These are not duplicates of inline single-field indexes)
 productSchema.index({ vendorId: 1, isActive: 1 });
 productSchema.index({ category: 1, brand: 1, isActive: 1 }); // Optimized for Amazon-style filtering
 productSchema.index({ isActive: 1, featured: 1 });
@@ -162,8 +161,6 @@ productSchema.index({ isActive: 1, trending: 1 });
 productSchema.index({ categoryAncestors: 1, isActive: 1 });
 productSchema.index({ name: 'text', description: 'text', brand: 'text', sku: 'text' });
 productSchema.index({ categoryAncestors: 1, isActive: 1, price: 1 }); // High-performance search index
-productSchema.index({ price: 1 });
-productSchema.index({ rating: -1 });
 productSchema.index({ createdAt: -1 });
 
 // PRE-SAVE HOOK improvements
