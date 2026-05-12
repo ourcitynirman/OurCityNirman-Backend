@@ -157,14 +157,14 @@ class AdminService {
         const skip = (page - 1) * limit;
 
         const filter = {};
-        if (category) filter.category = { $regex: category, $options: 'i' };
-        if (brand) filter.brand = { $regex: brand, $options: 'i' };
+        if (category) filter.category = category;
+        if (brand) filter.brand = brand;
         if (vendorId) filter.vendorId = vendorId;
         if (isActive !== undefined) filter.isActive = isActive === 'true';
         if (isApproved !== undefined) filter.isApproved = isApproved === 'true';
         if (isFeatured !== undefined) filter.featured = isFeatured === 'true';
         if (search) {
-            filter.$or = [{ name: { $regex: search, $options: 'i' } }, { brand: { $regex: search, $options: 'i' } }, { category: { $regex: search, $options: 'i' } }];
+            filter.$or = [{ name: { $regex: search, $options: 'i' } }];
         }
 
         const [products, total] = await Promise.all([

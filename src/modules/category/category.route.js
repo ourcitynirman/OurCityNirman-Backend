@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   getRootCategories,
+  getAllCategories,
   getChildrenCategories,
   getCategoryTree,
   getCategoryBreadcrumb,
@@ -17,7 +18,13 @@ const router = Router();
 
 // =============================================================================
 //                              PUBLIC ROUTES
-// =============================================================================
+
+/**
+ * @desc    Get all categories in a flat list
+ * @route   GET /api/v1/categories
+ * @access  Public
+ */
+router.get("/", getAllCategories);
 
 /**
  * @desc    Get all root-level categories (top of the hierarchy)

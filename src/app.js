@@ -96,6 +96,7 @@ app.use(
                     ],
                     connectSrc: [
                         "'self'",
+                        'https://api.postalpincode.in',
                         'https://*.razorpay.com',
                         'https://api.razorpay.com',
                     ],
@@ -126,29 +127,15 @@ app.use(cookieParser());
 // // ─── CSRF PROTECTION ────────────────────────────────────────────────────────
 // // csurf is deprecated and can cause issues with Postman/development. 
 // // For production, ensure you have a robust CSRF strategy if using cookies.
-// /*
-// const csrfProtection = csurf({
-//     cookie: {
-//         httpOnly: true,
-//         secure: process.env.NODE_ENV === 'production',
-//         sameSite: 'strict',
-//     }
-// });
-
-// // Exclude webhooks from CSRF if needed, else apply to all API routes
-// app.use((req, res, next) => {
-//     // Skip CSRF for webhooks (e.g. Razorpay/Stripe)
-//     if (req.path.startsWith('/api/v1/payments/webhook')) {
-//         return next();
-//     }
-//     csrfProtection(req, res, next);
-// });
-
-// // CSRF Token Provider Endpoint
-// app.get('/api/v1/csrf-token', (req, res) => {
-//     res.status(200).json({ success: true, csrfToken: req.csrfToken() });
-// });
-// */
+// ─── CSRF TOKEN PROVIDER ──────────────────────────────────────────────────
+// This satisfies frontend requests for CSRF tokens.
+// Full CSRF protection is currently disabled to simplify development/Postman testing.
+app.get('/api/v1/csrf-token', (req, res) => {
+    res.status(200).json({ 
+        success: true, 
+        csrfToken: 'not-implemented-in-dev' 
+    });
+});
 
 app.use(express.static('public'));
 

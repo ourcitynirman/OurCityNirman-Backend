@@ -55,13 +55,16 @@ class InvoiceService {
 
             const firstVendorId = items[0]?.vendor;
             if (firstVendorId) {
-                const VendorProfile = (await import('../vendor/vendor-profile.model.js')).default;
-                const vProfile = await VendorProfile.findOne({ userId: firstVendorId });
-                if (vProfile) {
+                const Shop = (await import('../shop/shop.model.js')).default;
+                const shop = await Shop.findOne({ vendor: firstVendorId });
+                if (shop) {
                     sellerInfo = {
-                        name: vProfile.businessName || sellerInfo.name, address: vProfile.businessAddress?.street || sellerInfo.address,
-                        city: vProfile.businessAddress?.city || sellerInfo.city, state: vProfile.businessAddress?.state || sellerInfo.state,
-                        pincode: vProfile.businessAddress?.zipCode || sellerInfo.pincode, gstin: vProfile.gstNumber || sellerInfo.gstin
+                        name: shop.shopname || sellerInfo.name,
+                        address: shop.address?.landmark || shop.address?.village || sellerInfo.address,
+                        city: shop.address?.city || sellerInfo.city,
+                        state: shop.address?.state || sellerInfo.state,
+                        pincode: shop.address?.pincode || sellerInfo.pincode,
+                        gstin: shop.gstNumber || sellerInfo.gstin
                     };
                 }
             }

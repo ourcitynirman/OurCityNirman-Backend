@@ -299,7 +299,7 @@ class ProductService {
         }
         
         const categoryDoc = await Category.findById(category).lean();
-        if (!categoryDoc?.isLeaf) throw new ApiError(400, 'Specific leaf category required');
+        if (!categoryDoc) throw new ApiError(400, 'Category not found');
         
         const categoryAncestors = [...(categoryDoc.ancestors?.map(a => a._id) || []), categoryDoc._id];
 
@@ -335,7 +335,7 @@ class ProductService {
 
         if (updateData.category && updateData.category !== existing.category.toString()) {
             const cat = await Category.findById(updateData.category).lean();
-            if (!cat?.isLeaf) throw new ApiError(400, 'Leaf category required');
+            if (!cat) throw new ApiError(400, 'Category not found');
             updateData.categoryAncestors = [...(cat.ancestors?.map(a => a._id) || []), cat._id];
         }
 
@@ -436,20 +436,63 @@ class ProductService {
         const isAdmin = user.role === 'admin';
         const matchFilter = isAdmin ? { isActive: true } : { vendorId: new mongoose.Types.ObjectId(user._id), isActive: true };
         
-        const [stats, categoryStats, brandStats, topPerformingProducts, revenueByCategory] = await Promise.all([
-            Product.aggregate([{ $match: matchFilter }, { $group: { _id: null, totalProducts: { $sum: 1 }, totalStock: { $sum: '$quantityAvailable' }, avgRating: { $avg: '$rating' }, totalValue: { $sum: { $multiply: ['$price', '$quantityAvailable'] } }, inStockProducts: { $sum: { $cond: ['$inStock', 1, 0] } }, outOfStockProducts: { $sum: { $cond: ['$inStock', 0, 1] } }, featuredProducts: { $sum: { $cond: ['$featured', 1, 0] } }, trendingProducts: { $sum: { $cond: ['$trending', 1, 0] } }, lowStockProducts: { $sum: { $cond: [{ $and: ['$inStock', { $lte: ['$quantityAvailable', 50] }] }, 1, 0] } } } }]),
-            Product.aggregate([{ $match: matchFilter }, { $group: { _id: '$category', count: { $sum: 1 }, totalStock: { $sum: '$quantityAvailable' } } }, { $lookup: { from: 'categories', localField: '_id', foreignField: '_id', as: 'cat' } }, { $addFields: { categoryName: { $ifNull: [{ $arrayElemAt: ['$cat.name', 0] }, 'Uncategorized'] } } }, { $project: { cat: 0 } }]),
-            Product.aggregate([{ $match: matchFilter }, { $group: { _id: '$brand', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]),
-            Product.aggregate([{ $match: matchFilter }, { $sort: { rating: -1 }, }, { $limit: 10 }]),
-            Product.aggregate([{ $match: matchFilter }, { $group: { _id: '$category', totalRevenue: { $sum: { $multiply: ['$price', '$quantityAvailable'] } } } }])
+        const [stats, categoryStats, brandStats, topPerformingProducts] = await Promise.all([
+            Product.aggregate([
+                { $match: matchFilter },
+                {
+                    $group: {
+                        _id: null,
+                        totalProducts: { $sum: 1 },
+                        totalStock: { $sum: '$quantityAvailable' },
+                        avgRating: { $avg: '$rating' },
+                        totalValue: { $sum: { $multiply: [{ $ifNull: ['$price', 0] }, { $ifNull: ['$quantityAvailable', 0] }] } },
+                        inStockProducts: { $sum: { $cond: ['$inStock', 1, 0] } },
+                        outOfStockProducts: { $sum: { $cond: ['$inStock', 0, 1] } },
+                        featuredProducts: { $sum: { $cond: ['$featured', 1, 0] } },
+                        trendingProducts: { $sum: { $cond: ['$trending', 1, 0] } },
+                        lowStockProducts: { $sum: { $cond: [{ $and: ['$inStock', { $lte: ['$quantityAvailable', 50] }] }, 1, 0] } },
+                        // Margin Calculation: ((Price - BasePrice) / Price) * 100
+                        avgMargin: {
+                            $avg: {
+                                $cond: [
+                                    { $and: [{ $gt: ['$price', 0] }, { $gt: ['$basePrice', 0] }] },
+                                    { $multiply: [{ $divide: [{ $subtract: ['$price', '$basePrice'] }, '$price'] }, 100] },
+                                    null
+                                ]
+                            }
+                        }
+                    }
+                }
+            ]),
+            Product.aggregate([
+                { $match: matchFilter },
+                { $group: { _id: '$category', count: { $sum: 1 } } },
+                { $lookup: { from: 'categories', localField: '_id', foreignField: '_id', as: 'cat' } },
+                { $addFields: { name: { $ifNull: [{ $arrayElemAt: ['$cat.name', 0] }, 'Uncategorized'] } } },
+                { $project: { cat: 0 } },
+                { $sort: { count: -1 } }
+            ]),
+            Product.aggregate([
+                { $match: matchFilter },
+                { $group: { _id: '$brand', count: { $sum: 1 } } },
+                { $lookup: { from: 'brands', localField: '_id', foreignField: '_id', as: 'br' } },
+                { $addFields: { name: { $ifNull: [{ $arrayElemAt: ['$br.name', 0] }, 'Generic'] } } },
+                { $project: { br: 0 } },
+                { $sort: { count: -1 } },
+                { $limit: 10 }
+            ]),
+            Product.aggregate([
+                { $match: matchFilter },
+                { $sort: { rating: -1 } },
+                { $limit: 10 }
+            ])
         ]);
         
         return {
             stats: stats[0] || {},
             categoryBreakdown: categoryStats,
             topBrands: brandStats,
-            topPerformingProducts,
-            revenueByCategory
+            topProducts: topPerformingProducts
         };
     }
 

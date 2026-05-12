@@ -22,7 +22,8 @@ export const getSearchSuggestions = asyncHandler(async (req, res, next) => {
         return res.status(200).json(new ApiResponse(200, result, 'Suggestions fetched successfully'));
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
     }
@@ -41,7 +42,8 @@ export const logRecentlyViewed = asyncHandler(async (req, res, next) => {
         return res.status(200).json(new ApiResponse(200, { logged: true, productId }, 'View logged'));
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
     }
@@ -59,7 +61,8 @@ export const getRecentlyViewed = asyncHandler(async (req, res, next) => {
         return res.status(200).json(new ApiResponse(200, result, 'Recently viewed products fetched successfully'));
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
     }
@@ -77,7 +80,8 @@ export const compareProducts = asyncHandler(async (req, res, next) => {
         return res.status(200).json(new ApiResponse(200, result, 'Comparison data fetched successfully'));
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
     }
@@ -98,7 +102,8 @@ export const SearchProducts = asyncHandler(async (req, res, next) => {
         return res.status(200).json(new ApiResponse(200, result, "Search results fetched successfully"));
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
     }

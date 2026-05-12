@@ -62,11 +62,17 @@ const shopSchema = new mongoose.Schema(
         storeType: {
             type: String,
             enum: { 
-                values: ["Retail", "Wholesale", "Manufacturer", "Distributor", "Service Provider"], 
+                values: ["retailer", "wholesaler", "manufacturer", "distributor", "service_provider", "other"], 
                 message: "Invalid store type: {VALUE}" },
 
             default: null,
         },
+        deliveryAreas: [{
+            pincode: String,
+            areaName: String,
+            district: String,
+            state: String
+        }],
         category: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Category",
@@ -105,6 +111,12 @@ const shopSchema = new mongoose.Schema(
             type: String, trim: true, uppercase: true, default: null,
             validate: { validator: (v) => !v || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(v), message: "Please provide a valid GST number" },
         },
+        panNumber: {
+            type: String, trim: true, uppercase: true, default: null,
+            validate: { validator: (v) => !v || /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(v), message: "Please provide a valid PAN number" },
+        },
+        whatsapp: { type: String, trim: true, default: null },
+
         financeOptions: {
             type: [String],
             enum: { values: ["Cash", "UPI", "Net Banking", "Credit Card", "Debit Card", "EMI", "Cheque", "Bank Transfer"], message: "Invalid finance option: {VALUE}" },
@@ -120,8 +132,6 @@ const shopSchema = new mongoose.Schema(
                 default: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
             },
         },
-
-        deliveryAreas: { type: [String], default: [] },
 
         isActive: { type: Boolean, default: true },
         isVerified: { type: Boolean, default: false },
@@ -155,6 +165,14 @@ const shopSchema = new mongoose.Schema(
 
         verificationAttempts: { type: Number, default: 0, min: 0 },
 
+        bankDetails: {
+            accountNumber: { type: String, select: false },
+            ifscCode: { type: String, select: false },
+            accountHolderName: { type: String, select: false },
+            bankName: String
+        },
+
+        totalRevenue: { type: Number, default: 0 },
         totalProducts: { type: Number, default: 0, min: 0 },
         totalOrders: { type: Number, default: 0, min: 0 },
         rating: {
@@ -186,7 +204,7 @@ shopSchema.virtual("canRequestVerification").get(function () {
     return ["not_requested", "rejected"].includes(this.verificationStatus);
 });
 
-shopSchema.pre("save", function (next) {
+shopSchema.pre("save", async function () {
     if (this.isModified("shopname")) {
         this.slug =
             this.shopname.toLowerCase().trim()
@@ -195,7 +213,6 @@ shopSchema.pre("save", function (next) {
                 .replace(/-+/g, "-") +
             "-" + this._id.toString().slice(-5);
     }
-    next();
 });
 
 shopSchema.statics.findByVendor = function (vendorId) { return this.findOne({ vendor: vendorId }); };

@@ -28,18 +28,56 @@ const availabilitySchema = z.object({
 export const createShopSchema = z.object({
     shopname: z.string().min(2).max(100),
     category: objectIdSchema,
-    storeType: z.enum(["Retail", "Wholesale", "Manufacturer", "Distributor", "Service Provider"]).optional().nullable(),
+    storeType: z.enum(["retailer", "wholesaler", "manufacturer", "distributor", "service_provider", "other"]).optional().nullable(),
     description: z.string().max(1000).optional().nullable(),
     tagline: z.string().max(150).optional().nullable(),
     phone: z.string().optional().nullable(),
     alternativephone: z.string().optional().nullable(),
     email: z.string().email().optional().nullable(),
-    website: z.string().url().optional().nullable(),
+    website: z.string().optional().nullable(),
     gstNumber: z.string().optional().nullable(),
-    address: addressSchema.optional(),
-    financeOptions: z.array(z.string()).optional().default([]),
-    deliveryAreas: z.array(z.string()).optional().default([]),
-    availability: availabilitySchema.optional(),
+    address: z.preprocess((val) => {
+        if (typeof val === 'string') {
+            try { return JSON.parse(val); } catch { return val; }
+        }
+        return val;
+    }, addressSchema.optional()),
+    financeOptions: z.preprocess((val) => {
+        if (typeof val === 'string') {
+            try { return JSON.parse(val); } catch { return val; }
+        }
+        return val;
+    }, z.array(z.string()).optional().default([])),
+    deliveryAreas: z.preprocess((val) => {
+        if (typeof val === 'string') {
+            try { return JSON.parse(val); } catch { return val; }
+        }
+        return val;
+    }, z.array(z.object({
+        pincode: z.string(),
+        areaName: z.string(),
+        district: z.string(),
+        state: z.string()
+    })).optional().default([])),
+    availability: z.preprocess((val) => {
+        if (typeof val === 'string') {
+            try { return JSON.parse(val); } catch { return val; }
+        }
+        return val;
+    }, availabilitySchema.optional()),
+    panNumber: z.string().optional().nullable(),
+    whatsapp: z.string().optional().nullable(),
+    bankDetails: z.preprocess((val) => {
+        if (typeof val === 'string') {
+            try { return JSON.parse(val); } catch { return val; }
+        }
+        return val;
+    }, z.object({
+        accountNumber: z.string().optional(),
+        ifscCode: z.string().optional(),
+        accountHolderName: z.string().optional(),
+        bankName: z.string().optional()
+    }).optional()),
 });
 
 export const updateShopSchema = createShopSchema.partial();
@@ -76,4 +114,25 @@ export const shopQuerySchema = z.object({
 export const adminShopQuerySchema = shopQuerySchema.extend({
     isActive: z.enum(["true", "false"]).optional(),
     verificationStatus: z.enum(["pending", "approved", "rejected", "not_requested"]).optional(),
+    status: z.enum(["all", "pending", "approved", "rejected"]).optional(),
 });
+
+// ─── Vendor specific schemas ──────────────────────────────────────────────────
+export const vendorStatsQuerySchema = z.object({});
+export const inventoryReportQuerySchema = z.object({});
+
+export const vendorOrderQuerySchema = z.object({
+    page: z.preprocess((val) => (val ? parseInt(val, 10) : 1), z.number().int().min(1)),
+    limit: z.preprocess((val) => (val ? parseInt(val, 10) : 10), z.number().int().min(1).max(50)),
+    status: z.string().optional(),
+});
+
+export const orderIdParamSchema = z.object({
+    id: objectIdSchema,
+});
+
+export const updateVendorOrderStatusSchema = z.object({
+    status: z.enum(['confirmed', 'processing', 'shipped', 'out_for_delivery', 'delivered']),
+    note: z.string().max(300).optional(),
+});
+

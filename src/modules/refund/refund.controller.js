@@ -41,3 +41,13 @@ export const getRefundDetails = asyncHandler(async (req, res, next) => {
         next(err);
     }
 });
+
+/**
+ * @desc    List all refunds (Admin)
+ * @route   GET /api/v1/refunds
+ * @access  Private (Admin)
+ */
+export const listRefunds = asyncHandler(async (req, res) => {
+    const result = await RefundService.listRefunds(req.query);
+    return res.status(200).json(new ApiResponse(200, result, 'Refunds listed successfully'));
+});

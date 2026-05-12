@@ -51,4 +51,6 @@ export const resetPasswordSchema = z.object({
 export const updateProfileSchema = z.object({
     fullName: z.string().trim().min(3).max(50).optional(),
     phone: z.string().trim().regex(/^[0-9]{10}$/, "Phone number must be exactly 10 digits").optional(),
+    removeProfileImage: z.preprocess((val) => val === 'true' || val === true, z.boolean()).optional(),
 });
+

@@ -25,5 +25,8 @@ export const generatePrefixedId = async (prefix) => {
     return `${key}${number}`;
 };
 
+
+
+
 export const generateVendorId = () => generatePrefixedId("OCNVEN");
 export const generateOrderId = () => generatePrefixedId("OCNORD");

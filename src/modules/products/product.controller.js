@@ -21,18 +21,16 @@ import {
  * @route   GET /api/v1/products
  * @access  Public
  */
-export const getAllProducts = asyncHandler(async (req, res, next) => {
-    try {
-        const queryData = productQuerySchema.parse(req.query);
-        const result = await ProductService.getAllProducts(queryData, req.user);
+/**
+ * @desc    Get all products with advanced filtering and pagination
+ * @route   GET /api/v1/products
+ * @access  Public
+ */
+export const getAllProducts = asyncHandler(async (req, res) => {
+    const queryData = productQuerySchema.parse(req.query);
+    const result = await ProductService.getAllProducts(queryData, req.user);
 
-        return res.status(200).json(new ApiResponse(200, result, "Products fetched successfully"));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(new ApiResponse(200, result, "Products fetched successfully"));
 });
 
 /**
@@ -40,18 +38,11 @@ export const getAllProducts = asyncHandler(async (req, res, next) => {
  * @route   GET /api/v1/products/:id
  * @access  Public
  */
-export const getProductById = asyncHandler(async (req, res, next) => {
-    try {
-        const { id } = productIdParamSchema.parse(req.params);
-        const product = await ProductService.getProductById(id, req.user);
+export const getProductById = asyncHandler(async (req, res) => {
+    const { id } = productIdParamSchema.parse(req.params);
+    const product = await ProductService.getProductById(id, req.user);
 
-        return res.status(200).json(new ApiResponse(200, product, "Product fetched successfully"));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(new ApiResponse(200, product, "Product fetched successfully"));
 });
 
 /**
@@ -59,18 +50,11 @@ export const getProductById = asyncHandler(async (req, res, next) => {
  * @route   GET /api/v1/products/slug/:slug
  * @access  Public
  */
-export const getProductBySlug = asyncHandler(async (req, res, next) => {
-    try {
-        const { slug } = productSlugParamSchema.parse(req.params);
-        const product = await ProductService.getProductBySlug(slug, req.user);
+export const getProductBySlug = asyncHandler(async (req, res) => {
+    const { slug } = productSlugParamSchema.parse(req.params);
+    const product = await ProductService.getProductBySlug(slug, req.user);
 
-        return res.status(200).json(new ApiResponse(200, product, "Product fetched successfully"));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(new ApiResponse(200, product, "Product fetched successfully"));
 });
 
 /**
@@ -78,18 +62,11 @@ export const getProductBySlug = asyncHandler(async (req, res, next) => {
  * @route   GET /api/v1/products/identifier/:identifier
  * @access  Public
  */
-export const getProductByIdentifier = asyncHandler(async (req, res, next) => {
-    try {
-        const { identifier } = productIdentifierParamSchema.parse(req.params);
-        const product = await ProductService.getProductByIdentifier(identifier, req.user);
+export const getProductByIdentifier = asyncHandler(async (req, res) => {
+    const { identifier } = productIdentifierParamSchema.parse(req.params);
+    const product = await ProductService.getProductByIdentifier(identifier, req.user);
 
-        return res.status(200).json(new ApiResponse(200, product, "Product fetched successfully"));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(new ApiResponse(200, product, "Product fetched successfully"));
 });
 
 /**
@@ -97,18 +74,11 @@ export const getProductByIdentifier = asyncHandler(async (req, res, next) => {
  * @route   GET /api/v1/products/vendor/:vendorId
  * @access  Public
  */
-export const getProductsByVendor = asyncHandler(async (req, res, next) => {
-    try {
-        const { vendorId } = vendorIdParamSchema.parse(req.params);
-        const result = await ProductService.getProductsByVendor(vendorId, req.query, req.user);
+export const getProductsByVendor = asyncHandler(async (req, res) => {
+    const { vendorId } = vendorIdParamSchema.parse(req.params);
+    const result = await ProductService.getProductsByVendor(vendorId, req.query, req.user);
 
-        return res.status(200).json(new ApiResponse(200, result, "Vendor products fetched successfully"));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(new ApiResponse(200, result, "Vendor products fetched successfully"));
 });
 
 /**
@@ -156,18 +126,11 @@ export const getOfferProducts = asyncHandler(async (req, res) => {
  * @route   POST /api/v1/products
  * @access  Private (Vendor/Admin)
  */
-export const createProduct = asyncHandler(async (req, res, next) => {
-    try {
-        const validatedData = createProductSchema.parse(req.body);
-        const product = await ProductService.createProduct(validatedData, req.user, req.files);
+export const createProduct = asyncHandler(async (req, res) => {
+    const validatedData = createProductSchema.parse(req.body);
+    const product = await ProductService.createProduct(validatedData, req.user, req.files);
 
-        return res.status(201).json(new ApiResponse(201, product, "Product created successfully"));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
-        }
-        next(err);
-    }
+    return res.status(201).json(new ApiResponse(201, product, "Product created successfully"));
 });
 
 /**
@@ -175,19 +138,12 @@ export const createProduct = asyncHandler(async (req, res, next) => {
  * @route   PATCH /api/v1/products/:id
  * @access  Private (Vendor/Admin)
  */
-export const updateProduct = asyncHandler(async (req, res, next) => {
-    try {
-        const { id } = productIdParamSchema.parse(req.params);
-        const validatedData = updateProductSchema.parse(req.body);
-        const product = await ProductService.updateProduct(id, validatedData, req.user, req.files);
+export const updateProduct = asyncHandler(async (req, res) => {
+    const { id } = productIdParamSchema.parse(req.params);
+    const validatedData = updateProductSchema.parse(req.body);
+    const product = await ProductService.updateProduct(id, validatedData, req.user, req.files);
 
-        return res.status(200).json(new ApiResponse(200, product, "Product updated successfully"));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(new ApiResponse(200, product, "Product updated successfully"));
 });
 
 /**
@@ -195,18 +151,11 @@ export const updateProduct = asyncHandler(async (req, res, next) => {
  * @route   DELETE /api/v1/products/:id
  * @access  Private (Vendor/Admin)
  */
-export const deleteProduct = asyncHandler(async (req, res, next) => {
-    try {
-        const { id } = productIdParamSchema.parse(req.params);
-        await ProductService.deleteProduct(id, req.user);
+export const deleteProduct = asyncHandler(async (req, res) => {
+    const { id } = productIdParamSchema.parse(req.params);
+    await ProductService.deleteProduct(id, req.user);
 
-        return res.status(200).json(new ApiResponse(200, null, "Product deactivated successfully"));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(new ApiResponse(200, null, "Product deactivated successfully"));
 });
 
 /**
@@ -214,18 +163,11 @@ export const deleteProduct = asyncHandler(async (req, res, next) => {
  * @route   DELETE /api/v1/products/:id/permanent
  * @access  Private (Admin)
  */
-export const permanentDeleteProduct = asyncHandler(async (req, res, next) => {
-    try {
-        const { id } = productIdParamSchema.parse(req.params);
-        await ProductService.permanentDeleteProduct(id, req.user);
+export const permanentDeleteProduct = asyncHandler(async (req, res) => {
+    const { id } = productIdParamSchema.parse(req.params);
+    await ProductService.permanentDeleteProduct(id, req.user);
 
-        return res.status(200).json(new ApiResponse(200, null, "Product permanently deleted"));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(new ApiResponse(200, null, "Product permanently deleted"));
 });
 
 /**
@@ -233,18 +175,11 @@ export const permanentDeleteProduct = asyncHandler(async (req, res, next) => {
  * @route   PATCH /api/v1/products/bulk-update
  * @access  Private (Admin)
  */
-export const bulkUpdateProducts = asyncHandler(async (req, res, next) => {
-    try {
-        const { productIds, updates } = bulkUpdateProductsSchema.parse(req.body);
-        const count = await ProductService.bulkUpdateProducts(productIds, updates, req.user);
+export const bulkUpdateProducts = asyncHandler(async (req, res) => {
+    const { productIds, updates } = bulkUpdateProductsSchema.parse(req.body);
+    const count = await ProductService.bulkUpdateProducts(productIds, updates, req.user);
 
-        return res.status(200).json(new ApiResponse(200, { count }, `${count} products updated successfully`));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(new ApiResponse(200, { count }, `${count} products updated successfully`));
 });
 
 /**
@@ -252,18 +187,11 @@ export const bulkUpdateProducts = asyncHandler(async (req, res, next) => {
  * @route   PATCH /api/v1/products/:id/toggle-status
  * @access  Private (Vendor/Admin)
  */
-export const toggleProductStatus = asyncHandler(async (req, res, next) => {
-    try {
-        const { id } = productIdParamSchema.parse(req.params);
-        const isActive = await ProductService.toggleProductStatus(id, req.user);
+export const toggleProductStatus = asyncHandler(async (req, res) => {
+    const { id } = productIdParamSchema.parse(req.params);
+    const isActive = await ProductService.toggleProductStatus(id, req.user);
 
-        return res.status(200).json(new ApiResponse(200, { isActive }, `Product ${isActive ? 'activated' : 'deactivated'} successfully`));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(new ApiResponse(200, { isActive }, `Product ${isActive ? 'activated' : 'deactivated'} successfully`));
 });
 
 /**
@@ -271,18 +199,11 @@ export const toggleProductStatus = asyncHandler(async (req, res, next) => {
  * @route   PATCH /api/v1/products/:id/toggle-featured
  * @access  Private (Admin)
  */
-export const toggleFeatured = asyncHandler(async (req, res, next) => {
-    try {
-        const { id } = productIdParamSchema.parse(req.params);
-        const featured = await ProductService.toggleFeatured(id, req.user);
+export const toggleFeatured = asyncHandler(async (req, res) => {
+    const { id } = productIdParamSchema.parse(req.params);
+    const featured = await ProductService.toggleFeatured(id, req.user);
 
-        return res.status(200).json(new ApiResponse(200, { featured }, `Product featured status: ${featured}`));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(new ApiResponse(200, { featured }, `Product featured status: ${featured}`));
 });
 
 /**
@@ -290,18 +211,11 @@ export const toggleFeatured = asyncHandler(async (req, res, next) => {
  * @route   PATCH /api/v1/products/:id/toggle-trending
  * @access  Private (Admin)
  */
-export const toggleTrending = asyncHandler(async (req, res, next) => {
-    try {
-        const { id } = productIdParamSchema.parse(req.params);
-        const trending = await ProductService.toggleTrending(id, req.user);
+export const toggleTrending = asyncHandler(async (req, res) => {
+    const { id } = productIdParamSchema.parse(req.params);
+    const trending = await ProductService.toggleTrending(id, req.user);
 
-        return res.status(200).json(new ApiResponse(200, { trending }, `Product trending status: ${trending}`));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(new ApiResponse(200, { trending }, `Product trending status: ${trending}`));
 });
 
 /**
@@ -309,19 +223,12 @@ export const toggleTrending = asyncHandler(async (req, res, next) => {
  * @route   PATCH /api/v1/products/:id/base-price
  * @access  Private (Vendor/Admin)
  */
-export const updateBasePrice = asyncHandler(async (req, res, next) => {
-    try {
-        const { id } = productIdParamSchema.parse(req.params);
-        const { basePrice } = updateBasePriceSchema.parse(req.body);
-        const updatedPrice = await ProductService.updateBasePrice(id, basePrice, req.user);
+export const updateBasePrice = asyncHandler(async (req, res) => {
+    const { id } = productIdParamSchema.parse(req.params);
+    const { basePrice } = updateBasePriceSchema.parse(req.body);
+    const updatedPrice = await ProductService.updateBasePrice(id, basePrice, req.user);
 
-        return res.status(200).json(new ApiResponse(200, { basePrice: updatedPrice }, "Base price updated successfully"));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(new ApiResponse(200, { basePrice: updatedPrice }, "Base price updated successfully"));
 });
 
 /**
@@ -360,19 +267,12 @@ export const getAllBrands = asyncHandler(async (req, res) => {
  * @route   POST /api/v1/products/:id/reviews
  * @access  Private
  */
-export const addProductReview = asyncHandler(async (req, res, next) => {
-    try {
-        const { id } = productIdParamSchema.parse(req.params);
-        const { reviewId } = addReviewSchema.parse(req.body);
-        await ProductService.addProductReview(id, reviewId);
+export const addProductReview = asyncHandler(async (req, res) => {
+    const { id } = productIdParamSchema.parse(req.params);
+    const { reviewId } = addReviewSchema.parse(req.body);
+    await ProductService.addProductReview(id, reviewId);
 
-        return res.status(200).json(new ApiResponse(200, null, "Review added successfully"));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(new ApiResponse(200, null, "Review added successfully"));
 });
 
 /**
@@ -380,19 +280,12 @@ export const addProductReview = asyncHandler(async (req, res, next) => {
  * @route   PATCH /api/v1/products/:id/rating
  * @access  Private
  */
-export const updateProductRating = asyncHandler(async (req, res, next) => {
-    try {
-        const { id } = productIdParamSchema.parse(req.params);
-        const { rating } = updateRatingSchema.parse(req.body);
-        const newRating = await ProductService.updateProductRating(id, rating);
+export const updateProductRating = asyncHandler(async (req, res) => {
+    const { id } = productIdParamSchema.parse(req.params);
+    const { rating } = updateRatingSchema.parse(req.body);
+    const newRating = await ProductService.updateProductRating(id, rating);
 
-        return res.status(200).json(new ApiResponse(200, { rating: newRating }, "Product rating updated successfully"));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(new ApiResponse(200, { rating: newRating }, "Product rating updated successfully"));
 });
 
 // --- SEARCH CONTROLLER RE-EXPORT ---

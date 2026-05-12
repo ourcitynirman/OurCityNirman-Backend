@@ -56,9 +56,17 @@ const productSchema = new mongoose.Schema({
   description: {
     type: String,
     required: [true, 'Product description is required'],
-
-    maxlength: [1000, 'Product description is too long'],
+    maxlength: [2000, 'Product description is too long'],
   },
+  keyFeatures: [{
+    type: String,
+    trim: true
+  }],
+  tags: [{
+    type: String,
+    trim: true,
+    index: true
+  }],
 
   images: [{
     url: { type: String, required: true },
@@ -67,7 +75,15 @@ const productSchema = new mongoose.Schema({
   }],
 
   // SPECIFICATIONS & ATTRIBUTES
-  // Using a Map for flexible, high-performance filtering (Amazon Style)
+  dimensions: { type: String, trim: true },
+  weight: { type: Number, default: 0 }, // in kg
+  material: { type: String, trim: true },
+  warranty: { type: String, trim: true },
+  origin: { type: String, trim: true },
+  bestFor: { type: String, trim: true },
+  company: { type: String, trim: true }, // Manufacturer
+  unit: { type: String, trim: true, default: 'Piece' }, // Bag, kg, etc.
+
   specifications: {
     type: Map,
     of: String,
@@ -112,15 +128,22 @@ const productSchema = new mongoose.Schema({
     default: false,
     index: true
   },
+  isApproved: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
 
-  /* 
-    DEPRECATED FIELDS (For Backwards Compatibility during migration)
-    These will be removed once ProductListing integration is complete.
-  */
-  price: { type: Number, default: 0 },
-  originalPrice: { type: Number, default: 0 },
-  quantityAvailable: { type: Number, default: 0 },
-  vendorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  // PRICING & INVENTORY
+  price: { type: Number, required: true, index: true },
+  originalPrice: { type: Number },
+  basePrice: { type: Number }, // Vendor's cost price
+  discount: { type: Number, default: 0 },
+  quantityAvailable: { type: Number, default: 0, index: true },
+  minOrder: { type: Number, default: 1 },
+  vendorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  sku: { type: String, unique: true, index: true },
+  inStock: { type: Boolean, default: true, index: true },
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
@@ -213,14 +236,21 @@ productSchema.virtual('isLowStock').get(function () {
   return this.inStock && this.quantityAvailable <= 50;
 });
 
+productSchema.virtual('reviews', {
+  ref: 'Review',
+  localField: '_id',
+  foreignField: 'productId'
+});
+
 // STATICS
 productSchema.statics.getVendorProducts = async function (vendorId, options = {}) {
-  const { page = 1, limit = 50, sort = '-createdAt', category, brand, inStock, featured, trending, search } = options;
+  const { page = 1, limit = 50, sort = '-createdAt', category, brand, inStock, featured, trending, search, sku } = options;
 
   const query = { vendorId, isActive: true };
 
   if (category) query.category = category;
   if (brand) query.brand = brand;
+  if (sku) query.sku = sku;
   if (inStock !== undefined) query.inStock = inStock;
   if (featured !== undefined) query.featured = featured;
   if (trending !== undefined) query.trending = trending;

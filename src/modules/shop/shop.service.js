@@ -4,6 +4,12 @@ import { uploadOnCloudinary, deleteFromCloudinary } from "../../shared/utils/clo
 import { ApiError } from "../../shared/utils/api.utils.js";
 import { generateVendorId } from "../../shared/utils/generator.utils.js";
 import { ROLES } from "../../shared/constants/roles.js";
+import OrderItem from "../orders/order-item.model.js";
+import Product from "../products/product.model.js";
+import Review from "../review/review.model.js";
+import Order from "../orders/order.model.js";
+import { sendDeliveryOTP } from "../../shared/services/delivery-otp.service.js";
+
 
 const extractPublicId = (url) => {
     if (!url) return null;
@@ -28,7 +34,7 @@ const uploadFile = async (localPath, folder) => {
     return url;
 };
 
-const VENDOR_SCALAR_FIELDS = ["shopname", "category", "storeType", "description", "tagline", "phone", "alternativephone", "website", "email", "gstNumber"];
+const VENDOR_SCALAR_FIELDS = ["shopname", "category", "storeType", "description", "tagline", "phone", "alternativephone", "website", "email", "gstNumber", "panNumber", "whatsapp"];
 
 class ShopService {
     static async createShop(shopData, user, files) {
@@ -125,9 +131,7 @@ class ShopService {
         const shop = await Shop.findByVendor(user._id).select(
             "shopname verificationStatus verificationRequestedAt verificationResolvedAt rejectionReason verificationAttempts verificationDocs.submittedAt canRequestVerification"
         );
-        if (!shop) throw new ApiError(404, "You have not created a shop yet");
-
-        return shop;
+        return shop; // Returns null if not found
     }
 
     static async updateShop(shopId, updateData, user, files) {
@@ -144,6 +148,7 @@ class ShopService {
         if (updateData.financeOptions) shop.financeOptions = updateData.financeOptions;
         if (updateData.deliveryAreas) shop.deliveryAreas = updateData.deliveryAreas;
         if (updateData.availability) { Object.assign(shop.availability, updateData.availability); shop.markModified("availability"); }
+        if (updateData.bankDetails) { Object.assign(shop.bankDetails, updateData.bankDetails); shop.markModified("bankDetails"); }
 
         if (files?.logo?.[0]?.path) { await safeDelete(shop.logo); shop.logo = await uploadFile(files.logo[0].path, "shops/logos"); }
         if (files?.banner?.[0]?.path) { await safeDelete(shop.banner); shop.banner = await uploadFile(files.banner[0].path, "shops/banners"); }
@@ -236,8 +241,7 @@ class ShopService {
         const shop = await Shop.findByVendor(user._id)
             .populate("vendor", "fullName email avatar")
             .populate("category", "name slug icon");
-        if (!shop) throw new ApiError(404, "Shop not found");
-        return shop;
+        return shop; // Returns null if not found, which is cleaner than throwing 404
     }
 
     static async getAllShops(query) {
@@ -293,8 +297,16 @@ class ShopService {
     }
 
     static async adminGetVerificationRequests(query) {
-        const { status = "pending", page, limit } = query;
-        const filter = { verificationStatus: status };
+        const { status, page, limit } = query;
+
+        let filter = {};
+        if (!status || status === "all") {
+            // "All" requests that are not "not_requested"
+            filter.verificationStatus = { $in: ["pending", "approved", "rejected"] };
+        } else {
+            // Strict filter for specific status
+            filter.verificationStatus = status;
+        } 
 
         const [shops, total] = await Promise.all([
             Shop.find(filter)
@@ -423,6 +435,211 @@ class ShopService {
             monthlyRegistrations: result.monthlyRegistrations,
         };
     }
+
+    // ─── Vendor specific methods (Merged from VendorService) ───────────────────
+    static async getVendorDashboardStats(vendorId) {
+        // 1. Basic Counts & Revenue
+        const stats = await OrderItem.aggregate([
+            { $match: { vendor: new mongoose.Types.ObjectId(vendorId) } },
+            {
+                $group: {
+                    _id: null,
+                    totalRevenue: { 
+                        $sum: { 
+                            $cond: [{ $eq: ["$itemStatus", "delivered"] }, "$totalPrice", 0] 
+                        } 
+                    },
+                    totalOrders: { $sum: 1 },
+                    pendingOrders: {
+                        $sum: {
+                            $cond: [{ $in: ["$itemStatus", ["pending", "confirmed", "processing"]] }, 1, 0]
+                        }
+                    },
+                    shippedOrders: {
+                        $sum: {
+                            $cond: [{ $eq: ["$itemStatus", "shipped"] }, 1, 0]
+                        }
+                    }
+                }
+            }
+        ]);
+
+        const dashboardStats = stats[0] || { totalRevenue: 0, totalOrders: 0, pendingOrders: 0, shippedOrders: 0 };
+
+        // 2. Product Stats
+        const productStats = await Product.aggregate([
+            { $match: { vendorId: new mongoose.Types.ObjectId(vendorId) } },
+            {
+                $group: {
+                    _id: null,
+                    totalProducts: { $sum: 1 },
+                    activeProducts: { $sum: { $cond: ["$isActive", 1, 0] } },
+                    lowStockCount: {
+                        $sum: {
+                            $cond: [{ $lte: ["$quantityAvailable", 5] }, 1, 0]
+                        }
+                    }
+                }
+            }
+        ]);
+
+        const pStats = productStats[0] || { totalProducts: 0, activeProducts: 0, lowStockCount: 0 };
+
+        // 3. Category Mix
+        const categoryMix = await Product.aggregate([
+            { $match: { vendorId: new mongoose.Types.ObjectId(vendorId) } },
+            { $group: { _id: "$category", count: { $sum: 1 } } },
+            { $sort: { count: -1 } }
+        ]);
+
+        // 4. Low Stock Products Listing
+
+        const lowStockProducts = await Product.find({ vendorId, quantityAvailable: { $lte: 5 } })
+            .select('name quantityAvailable price images')
+            .limit(5)
+            .lean();
+
+        // 4. Recent Reviews
+        const vendorProductIds = await Product.find({ vendorId }).select('_id').lean();
+        const productIdList = vendorProductIds.map(p => p._id);
+
+        const recentReviews = await Review.find({ productId: { $in: productIdList }, status: 'active' })
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .populate('userId', 'fullName profileImage')
+            .populate('productId', 'name')
+            .lean();
+
+        // 5. Monthly Revenue
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+        sixMonthsAgo.setDate(1);
+
+        const revenueHistory = await OrderItem.aggregate([
+            {
+                $match: {
+                    vendor: new mongoose.Types.ObjectId(vendorId),
+                    itemStatus: 'delivered',
+                    createdAt: { $gte: sixMonthsAgo }
+                }
+            },
+            {
+                $group: {
+                    _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
+                    revenue: { $sum: "$totalPrice" }
+                }
+            },
+            { $sort: { "_id.year": 1, "_id.month": 1 } }
+        ]);
+
+        // 6. Shop Info
+        const shop = await Shop.findOne({ vendor: vendorId }).select('shopname isVerified isActive rating');
+
+        return {
+            totalRevenue: dashboardStats.totalRevenue || 0,
+            totalOrders: dashboardStats.totalOrders || 0,
+            pendingOrders: dashboardStats.pendingOrders || 0,
+            shippedOrders: dashboardStats.shippedOrders || 0,
+            liveProducts: pStats.activeProducts || 0,
+            totalProducts: pStats.totalProducts || 0,
+            lowStockCount: pStats.lowStockCount || 0,
+            revenueChange: 0,
+            ordersChange: 0,
+            categoryMix: categoryMix.map(c => ({ name: c._id, value: c.count })),
+            lowStockProducts,
+            recentReviews,
+            revenueChart: revenueHistory, 
+            shop
+        };
+
+
+
+    }
+
+    static async getInventoryReport(vendorId) {
+        return await Product.find({ vendorId })
+            .select('name quantityAvailable price category brand isActive')
+            .sort({ quantityAvailable: 1 })
+            .lean();
+    }
+
+    static async getVendorOrders(vendorId, query) {
+        const { page = 1, limit = 10, status } = query;
+        const pageNum = Math.max(1, parseInt(page, 10));
+        const limitNum = Math.min(50, Math.max(1, parseInt(limit, 10)));
+
+        const filter = { vendor: vendorId, ...(status ? { itemStatus: status } : {}) };
+
+        const [items, total] = await Promise.all([
+            OrderItem.find(filter)
+                .sort({ createdAt: -1 })
+                .skip((pageNum - 1) * limitNum)
+                .limit(limitNum)
+                .populate('order_id', 'orderNumber totalAmount paymentStatus createdAt estimatedDelivery')
+                .populate('product', 'name price images')
+                .lean(),
+            OrderItem.countDocuments(filter),
+        ]);
+
+        const enriched = items.map((item) => ({
+            ...item.order_id,
+            _id: item.order_id?._id,
+            items: [item],
+        }));
+
+        return {
+            orders: enriched,
+            total,
+            pagination: { page: pageNum, limit: limitNum, pages: Math.ceil(total / limitNum) }
+        };
+    }
+
+    static async getVendorOrder(orderId, vendorId) {
+        const order = await Order.findById(orderId).lean();
+        if (!order) throw new ApiError(404, 'Order not found');
+
+        const items = await OrderItem.find({ order_id: orderId, vendor: vendorId }).populate('product', 'name price images');
+        order.items = items;
+        return order;
+    }
+
+    static async updateOrderStatus(orderId, vendorId, status, note) {
+        const order = await Order.findById(orderId);
+        if (!order) throw new ApiError(404, 'Order not found');
+
+        const vendorItems = await OrderItem.find({ order_id: order._id, vendor: vendorId });
+        if (vendorItems.length === 0) throw new ApiError(403, 'Access denied');
+
+        if (order.status === 'cancelled') throw new ApiError(400, 'Cannot update cancelled order');
+
+        await order.updateStatus(status, note || null, 'vendor');
+
+        if (status === 'out_for_delivery') {
+            sendDeliveryOTP(order._id).catch(err => console.error(`[OTP] Send failed:`, err.message));
+        }
+
+        if (status === 'delivered') {
+            order.deliveredAt = new Date();
+            if (order.paymentMethod === 'cod') order.paymentStatus = 'paid';
+            await order.save();
+        }
+
+        await OrderItem.updateMany({ order_id: order._id, vendor: vendorId }, { $set: { itemStatus: status } });
+        return order;
+    }
+
+    static async updateTracking(orderId, itemId, vendorId, trackingData) {
+        const item = await OrderItem.findOne({ _id: itemId, order_id: orderId, vendor: vendorId });
+        if (!item) throw new ApiError(404, "Order item not found or unauthorized");
+
+        if (trackingData.trackingNumber) item.trackingNumber = trackingData.trackingNumber;
+        if (trackingData.shippingCarrier) item.shippingCarrier = trackingData.shippingCarrier;
+
+        await item.save();
+        return item;
+    }
+
 }
+
 
 export default ShopService;

@@ -271,11 +271,12 @@ class AuthService {
         }
 
         const user = await User.findById(userId);
+        if (!user) throw new ApiError(404, "User not found");
 
         if (file) {
             const uploadResult = await uploadOnCloudinary(file.path, true);
             if (!uploadResult || !uploadResult.success) {
-                throw new ApiError(500, "Failed to upload image. Try again.");
+                throw new ApiError(500, uploadResult?.error || "Failed to upload image. Try again.");
             }
             updates.profileImage = uploadResult.url;
 
@@ -289,7 +290,24 @@ class AuthService {
                     logger.warn("Could not delete old profile image:", err.message);
                 }
             }
+        } else if (updates.removeProfileImage) {
+            // Delete existing image if any
+            if (user.profileImage && user.profileImage.includes("cloudinary.com")) {
+                try {
+                    const urlParts = user.profileImage.split("/");
+                    const filename = urlParts[urlParts.length - 1];
+                    const publicId = filename.split(".")[0];
+                    await deleteFromCloudinary(publicId, true);
+                } catch (err) {
+                    logger.warn("Could not delete profile image:", err.message);
+                }
+            }
+            updates.profileImage = null;
         }
+
+        // Clean up internal flag before saving to DB
+        delete updates.removeProfileImage;
+
 
         const updatedUser = await User.findByIdAndUpdate(
             userId,

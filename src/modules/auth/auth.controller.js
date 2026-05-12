@@ -28,21 +28,13 @@ const getCookieOptions = () => {
  * @route   POST /api/v1/auth/register
  * @access  Public
  */
-export const registerUser = asyncHandler(async (req, res, next) => {
-    try {
-        const validatedData = registerSchema.parse(req.body);
-        const result = await AuthService.registerUser(validatedData);
+export const registerUser = asyncHandler(async (req, res) => {
+    const validatedData = registerSchema.parse(req.body);
+    const result = await AuthService.registerUser(validatedData);
 
-        return res.status(200).json(
-            new ApiResponse(200, result, "OTP sent to your email. Please verify to complete registration.")
-        );
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            const messages = err.errors ? err.errors.map(e => e.message).join(', ') : err.message;
-            return next(new ApiError('Validation Error: ' + messages, 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(
+        new ApiResponse(200, result, "OTP sent to your email. Please verify to complete registration.")
+    );
 });
 
 /**
@@ -50,25 +42,17 @@ export const registerUser = asyncHandler(async (req, res, next) => {
  * @route   POST /api/v1/auth/verify
  * @access  Public
  */
-export const verifyRegistrationOTP = asyncHandler(async (req, res, next) => {
-    try {
-        const { email, otp } = verifyOTPSchema.parse(req.body);
-        const { user, accessToken, refreshToken } = await AuthService.verifyRegistrationOTP(email, otp);
+export const verifyRegistrationOTP = asyncHandler(async (req, res) => {
+    const { email, otp } = verifyOTPSchema.parse(req.body);
+    const { user, accessToken, refreshToken } = await AuthService.verifyRegistrationOTP(email, otp);
 
-        const cookieOptions = getCookieOptions();
+    const cookieOptions = getCookieOptions();
 
-        return res
-            .status(201)
-            .cookie("accessToken", accessToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 })
-            .cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: 30 * 24 * 60 * 60 * 1000 })
-            .json(new ApiResponse(201, { user, accessToken, refreshToken }, "Registration successful! You are now logged in."));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            const messages = err.errors ? err.errors.map(e => e.message).join(', ') : err.message;
-            return next(new ApiError('Validation Error: ' + messages, 400));
-        }
-        next(err);
-    }
+    return res
+        .status(201)
+        .cookie("accessToken", accessToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 })
+        .cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: 30 * 24 * 60 * 60 * 1000 })
+        .json(new ApiResponse(201, { user, accessToken, refreshToken }, "Registration successful! You are now logged in."));
 });
 
 /**
@@ -76,21 +60,13 @@ export const verifyRegistrationOTP = asyncHandler(async (req, res, next) => {
  * @route   POST /api/v1/auth/resend
  * @access  Public
  */
-export const resendRegistrationOTP = asyncHandler(async (req, res, next) => {
-    try {
-        const { email } = resendOTPSchema.parse(req.body);
-        const result = await AuthService.resendRegistrationOTP(email);
+export const resendRegistrationOTP = asyncHandler(async (req, res) => {
+    const { email } = resendOTPSchema.parse(req.body);
+    const result = await AuthService.resendRegistrationOTP(email);
 
-        return res.status(200).json(
-            new ApiResponse(200, result, "OTP resent successfully")
-        );
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            const messages = err.errors ? err.errors.map(e => e.message).join(', ') : err.message;
-            return next(new ApiError('Validation Error: ' + messages, 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(
+        new ApiResponse(200, result, "OTP resent successfully")
+    );
 });
 
 /**
@@ -98,25 +74,17 @@ export const resendRegistrationOTP = asyncHandler(async (req, res, next) => {
  * @route   POST /api/v1/auth/login
  * @access  Public
  */
-export const loginUser = asyncHandler(async (req, res, next) => {
-    try {
-        const validatedData = loginSchema.parse(req.body);
-        const { user, accessToken, refreshToken } = await AuthService.loginUser(validatedData);
+export const loginUser = asyncHandler(async (req, res) => {
+    const validatedData = loginSchema.parse(req.body);
+    const { user, accessToken, refreshToken } = await AuthService.loginUser(validatedData);
 
-        const cookieOptions = getCookieOptions();
+    const cookieOptions = getCookieOptions();
 
-        return res
-            .status(200)
-            .cookie("accessToken", accessToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 })
-            .cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: 30 * 24 * 60 * 60 * 1000 })
-            .json(new ApiResponse(200, { user, accessToken, refreshToken }, "Login successful"));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            const messages = err.errors ? err.errors.map(e => e.message).join(', ') : err.message;
-            return next(new ApiError('Validation Error: ' + messages, 400));
-        }
-        next(err);
-    }
+    return res
+        .status(200)
+        .cookie("accessToken", accessToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 })
+        .cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: 30 * 24 * 60 * 60 * 1000 })
+        .json(new ApiResponse(200, { user, accessToken, refreshToken }, "Login successful"));
 });
 
 /**
@@ -185,19 +153,11 @@ export const logoutAllDevices = asyncHandler(async (req, res) => {
  * @route   POST /api/v1/auth/change-password
  * @access  Private
  */
-export const changePassword = asyncHandler(async (req, res, next) => {
-    try {
-        const { oldPassword, newPassword } = changePasswordSchema.parse(req.body);
-        await AuthService.changePassword(req.user._id, oldPassword, newPassword);
+export const changePassword = asyncHandler(async (req, res) => {
+    const { oldPassword, newPassword } = changePasswordSchema.parse(req.body);
+    await AuthService.changePassword(req.user._id, oldPassword, newPassword);
 
-        return res.status(200).json(new ApiResponse(200, {}, "Password changed successfully"));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            const messages = err.errors ? err.errors.map(e => e.message).join(', ') : err.message;
-            return next(new ApiError('Validation Error: ' + messages, 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(new ApiResponse(200, {}, "Password changed successfully"));
 });
 
 /**
@@ -205,19 +165,11 @@ export const changePassword = asyncHandler(async (req, res, next) => {
  * @route   POST /api/v1/auth/forgot-password
  * @access  Public
  */
-export const forgotPassword = asyncHandler(async (req, res, next) => {
-    try {
-        const { email } = forgotPasswordSchema.parse(req.body);
-        await AuthService.forgotPassword(email);
+export const forgotPassword = asyncHandler(async (req, res) => {
+    const { email } = forgotPasswordSchema.parse(req.body);
+    await AuthService.forgotPassword(email);
 
-        return res.status(200).json(new ApiResponse(200, {}, "Password reset link sent to email"));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            const messages = err.errors ? err.errors.map(e => e.message).join(', ') : err.message;
-            return next(new ApiError('Validation Error: ' + messages, 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(new ApiResponse(200, {}, "Password reset link sent to email"));
 });
 
 /**
@@ -225,19 +177,11 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
  * @route   POST /api/v1/auth/reset-password/:token
  * @access  Public
  */
-export const resetPassword = asyncHandler(async (req, res, next) => {
-    try {
-        const { newPassword } = resetPasswordSchema.parse(req.body);
-        await AuthService.resetPassword(req.params.token, newPassword);
+export const resetPassword = asyncHandler(async (req, res) => {
+    const { newPassword } = resetPasswordSchema.parse(req.body);
+    await AuthService.resetPassword(req.params.token, newPassword);
 
-        return res.status(200).json(new ApiResponse(200, {}, "Password reset successfully"));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            const messages = err.errors ? err.errors.map(e => e.message).join(', ') : err.message;
-            return next(new ApiError('Validation Error: ' + messages, 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(new ApiResponse(200, {}, "Password reset successfully"));
 });
 
 /**
@@ -245,17 +189,9 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
  * @route   PATCH /api/v1/auth/update-profile
  * @access  Private
  */
-export const updateUserProfile = asyncHandler(async (req, res, next) => {
-    try {
-        const validatedData = updateProfileSchema.parse(req.body);
-        const user = await AuthService.updateUserProfile(req.user._id, validatedData, req.file);
+export const updateUserProfile = asyncHandler(async (req, res) => {
+    const validatedData = updateProfileSchema.parse(req.body);
+    const user = await AuthService.updateUserProfile(req.user._id, validatedData, req.file);
 
-        return res.status(200).json(new ApiResponse(200, user, "Profile updated successfully"));
-    } catch (err) {
-        if (err.name === 'ZodError') {
-            const messages = err.errors ? err.errors.map(e => e.message).join(', ') : err.message;
-            return next(new ApiError('Validation Error: ' + messages, 400));
-        }
-        next(err);
-    }
+    return res.status(200).json(new ApiResponse(200, user, "Profile updated successfully"));
 });

@@ -1,12 +1,18 @@
 import { z } from "zod";
 import mongoose from "mongoose";
 
-const objectIdSchema = z.string().refine((val) => mongoose.Types.ObjectId.isValid(val), {
+const objectIdSchema = z.preprocess((val) => {
+    if (val === "" || val === "null" || val === "undefined") return null;
+    return val;
+}, z.string().nullable().refine((val) => {
+    if (val === null) return true;
+    return mongoose.Types.ObjectId.isValid(val);
+}, {
     message: "Invalid ObjectId format",
-});
+}));
 
 export const categoryIdParamSchema = z.object({
-    id: objectIdSchema,
+    id: objectIdSchema.refine(val => val !== null, "ID is required"),
 });
 
 export const parentIdParamSchema = z.object({
@@ -25,7 +31,7 @@ export const includeInactiveQuerySchema = z.object({
 export const createCategorySchema = z.object({
     name: z.string().trim().min(1, "Name is required").max(100, "Name cannot exceed 100 characters"),
     description: z.string().trim().max(1000, "Description cannot exceed 1000 characters").optional().nullable(),
-    image: z.string().url("Image must be a valid URL").optional().nullable(),
+    image: z.string().optional().nullable(),
     icon: z.string().optional().nullable(),
     parent: objectIdSchema.optional().nullable(),
     sortOrder: z.preprocess((val) => (val !== undefined ? Number(val) : 0), z.number().int().optional()),

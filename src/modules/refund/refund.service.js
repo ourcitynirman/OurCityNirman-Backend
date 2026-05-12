@@ -61,6 +61,30 @@ class RefundService {
         if (!refund) throw new ApiError(404, 'No refund record found');
         return refund;
     }
+
+    static async listRefunds(query = {}) {
+        const { page = 1, limit = 15, status, search } = query;
+        const skip = (page - 1) * limit;
+        const filter = {};
+        if (status) filter.status = status;
+        
+        const [refunds, total] = await Promise.all([
+            Refund.find(filter)
+                .sort('-createdAt')
+                .skip(skip)
+                .limit(limit)
+                .populate('orderId', 'orderNumber totalAmount')
+                .populate('userId', 'fullName email phone')
+                .lean(),
+            Refund.countDocuments(filter)
+        ]);
+
+        return {
+            refunds,
+            total,
+            pagination: { page: Number(page), limit: Number(limit), pages: Math.ceil(total / limit) }
+        };
+    }
 }
 
 export default RefundService;

@@ -65,6 +65,13 @@ const reviewSchema = new mongoose.Schema(
   }
 );
 
+reviewSchema.virtual('user', {
+  ref: 'User',
+  localField: 'userId',
+  foreignField: '_id',
+  justOne: true
+});
+
 
 // One review per user per product
 reviewSchema.index({ productId: 1, userId: 1 }, { unique: true });

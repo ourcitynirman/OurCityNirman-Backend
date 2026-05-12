@@ -51,6 +51,16 @@ const errorHandler = (err, req, res, next) => { // eslint-disable-line no-unused
         });
     }
 
+    // ── Zod Validation Error ──────────────────────────────────────────────
+    if (err.name === 'ZodError') {
+        const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+        return res.status(400).json({
+            success : false,
+            message : `Validation Error: ${messages}`,
+            errors  : err.errors || [],
+        });
+    }
+
     // ── Mongoose Validation Error ─────────────────────────────────────────
     if (err.name === 'ValidationError') {
         const errors = Object.values(err.errors).map(e => e.message);

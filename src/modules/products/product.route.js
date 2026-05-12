@@ -109,7 +109,7 @@ ProductsRoute.get('/low-stock', verifyJWT, authorize('vendor', 'admin'), getLowS
 // --- PUBLIC FETCH ROUTES ---
 /**
  * @desc    Get featured products
- * @route   GET /api/v1/products/featured
+ * @route   GET   
  * @access  Public
  */
 ProductsRoute.get('/featured', publicLimiter, getFeaturedProducts);

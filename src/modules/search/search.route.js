@@ -58,6 +58,7 @@ const recentlyViewedLimiter = rateLimit({
  * @route   GET /api/v1/search/
  * @access  Public
  */
+
 SearchRoute.get(
   '/',
   searchLimiter,
@@ -69,6 +70,7 @@ SearchRoute.get(
  * @route   GET /api/v1/search/suggestions
  * @access  Public
  */
+
 SearchRoute.get(
   '/suggestions',
   suggestionsLimiter,
@@ -80,6 +82,7 @@ SearchRoute.get(
  * @route   POST /api/v1/search/recently-viewed/fetch
  * @access  Public
  */
+
 SearchRoute.post(
   '/recently-viewed/fetch',
   recentlyViewedLimiter,
@@ -91,6 +94,7 @@ SearchRoute.post(
  * @route   POST /api/v1/search/recently-viewed
  * @access  Public
  */
+
 SearchRoute.post(
   '/recently-viewed',
   recentlyViewedLimiter,
@@ -102,6 +106,7 @@ SearchRoute.post(
  * @route   POST /api/v1/search/compare
  * @access  Public
  */
+
 SearchRoute.post(
   '/compare',
   compareLimiter,

@@ -28,7 +28,8 @@ export const placeOrder = asyncHandler(async (req, res, next) => {
         return res.status(201).json(new ApiResponse(201, result, "Order placed successfully"));
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
     }
@@ -47,7 +48,8 @@ export const getMyOrders = asyncHandler(async (req, res, next) => {
         return res.status(200).json(new ApiResponse(200, result, "Orders fetched successfully"));
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
     }
@@ -66,7 +68,8 @@ export const getOrderById = asyncHandler(async (req, res, next) => {
         return res.status(200).json(new ApiResponse(200, order, "Order details fetched successfully"));
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
     }
@@ -85,7 +88,8 @@ export const getOrderHistory = asyncHandler(async (req, res, next) => {
         return res.status(200).json(new ApiResponse(200, history, "Order history fetched successfully"));
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
     }
@@ -105,7 +109,8 @@ export const cancelOrder = asyncHandler(async (req, res, next) => {
         return res.status(200).json(new ApiResponse(200, order, "Order cancelled successfully"));
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
     }
@@ -125,7 +130,8 @@ export const updateOrderStatus = asyncHandler(async (req, res, next) => {
         return res.status(200).json(new ApiResponse(200, order, `Order status updated to ${status}`));
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
     }
@@ -145,7 +151,8 @@ export const verifyDeliveryOrder = asyncHandler(async (req, res, next) => {
         return res.status(200).json(new ApiResponse(200, result, "Delivery verified successfully"));
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
     }
@@ -179,7 +186,8 @@ export const updateItemTracking = asyncHandler(async (req, res, next) => {
         return res.status(200).json(new ApiResponse(200, item, "Item tracking updated successfully"));
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
     }
@@ -198,7 +206,8 @@ export const adminGetAllOrders = asyncHandler(async (req, res, next) => {
         return res.status(200).json(new ApiResponse(200, result, "All orders fetched successfully"));
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
     }
@@ -218,7 +227,8 @@ export const adminCancelOrder = asyncHandler(async (req, res, next) => {
         return res.status(200).json(new ApiResponse(200, order, "Order cancelled by admin"));
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
     }
@@ -238,7 +248,8 @@ export const adminUpdateOrderStatus = asyncHandler(async (req, res, next) => {
         return res.status(200).json(new ApiResponse(200, order, `Order status updated to ${status}`));
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
     }

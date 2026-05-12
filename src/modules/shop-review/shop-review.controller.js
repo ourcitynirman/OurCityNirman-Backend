@@ -26,7 +26,8 @@ export const addShopReview = asyncHandler(async (req, res, next) => {
         );
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = err.errors ? err.errors.map(e => e.message).join(', ') : err.message;
+            return next(new ApiError('Validation Error: ' + messages, 400));
         }
         next(err);
     }
@@ -48,7 +49,8 @@ export const getShopReviews = asyncHandler(async (req, res, next) => {
         );
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = err.errors ? err.errors.map(e => e.message).join(', ') : err.message;
+            return next(new ApiError('Validation Error: ' + messages, 400));
         }
         next(err);
     }
@@ -70,7 +72,8 @@ export const updateShopReview = asyncHandler(async (req, res, next) => {
         );
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = err.errors ? err.errors.map(e => e.message).join(', ') : err.message;
+            return next(new ApiError('Validation Error: ' + messages, 400));
         }
         next(err);
     }
@@ -91,7 +94,8 @@ export const deleteShopReview = asyncHandler(async (req, res, next) => {
         );
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = err.errors ? err.errors.map(e => e.message).join(', ') : err.message;
+            return next(new ApiError('Validation Error: ' + messages, 400));
         }
         next(err);
     }
@@ -113,7 +117,8 @@ export const vendorRespondToShopReview = asyncHandler(async (req, res, next) => 
         );
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = err.errors ? err.errors.map(e => e.message).join(', ') : err.message;
+            return next(new ApiError('Validation Error: ' + messages, 400));
         }
         next(err);
     }
@@ -134,7 +139,29 @@ export const markHelpful = asyncHandler(async (req, res, next) => {
         );
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = err.errors ? err.errors.map(e => e.message).join(', ') : err.message;
+            return next(new ApiError('Validation Error: ' + messages, 400));
+        }
+        next(err);
+    }
+});
+/**
+ * @desc    Get all reviews for the current vendor's shop
+ * @route   GET /api/v1/shop-reviews/vendor/my-reviews
+ * @access  Private (Vendor)
+ */
+export const getVendorMyReviews = asyncHandler(async (req, res, next) => {
+    try {
+        const queryData = getShopReviewsQuerySchema.parse(req.query);
+        const result = await ShopReviewService.getVendorMyReviews(req.user._id, queryData);
+
+        return res.status(200).json(
+            new ApiResponse(200, result, "Vendor reviews fetched successfully.")
+        );
+    } catch (err) {
+        if (err.name === 'ZodError') {
+            const messages = err.errors ? err.errors.map(e => e.message).join(', ') : err.message;
+            return next(new ApiError('Validation Error: ' + messages, 400));
         }
         next(err);
     }

@@ -47,32 +47,62 @@ export const vendorIdParamSchema = z.object({
     vendorId: z.string().optional(),
 });
 
+// Helper: coerce FormData strings to numbers (FormData always sends strings)
+const coerceNum = (fallback) => z.preprocess(
+    (val) => {
+        if (val === undefined || val === null || val === '') return fallback;
+        const n = Number(val);
+        return isNaN(n) ? fallback : n;
+    },
+    z.number()
+);
+const coerceInt = (fallback) => z.preprocess(
+    (val) => {
+        if (val === undefined || val === null || val === '') return fallback;
+        const n = parseInt(String(val), 10);
+        return isNaN(n) ? fallback : n;
+    },
+    z.number().int()
+);
+
 export const createProductSchema = z.object({
     name: z.string().trim().min(1, "Product name is required").max(200),
     brand: z.string().trim().min(1, "Brand is required"),
     company: z.string().trim().optional(),
     category: objectIdSchema,
-    description: z.string().trim().min(1, "Product description is required").max(1000),
-    price: z.number().min(0),
-    originalPrice: z.number().min(0),
-    basePrice: z.number().min(0).optional().nullable(),
-    quantityAvailable: z.number().int().min(0).optional(),
-    featured: z.boolean().optional(),
-    trending: z.boolean().optional(),
+    description: z.string().trim().min(1, "Product description is required").max(2000),
+    keyFeatures: z.preprocess((val) => {
+        if (typeof val === 'string') return [val];
+        return val;
+    }, z.array(z.string())).optional(),
+    tags: z.preprocess((val) => {
+        if (typeof val === 'string') return [val];
+        return val;
+    }, z.array(z.string())).optional(),
+    price: coerceNum(undefined).pipe(z.number().min(0)),
+    originalPrice: coerceNum(undefined).pipe(z.number().min(0)).optional(),
+    basePrice: coerceNum(undefined).pipe(z.number().min(0)).optional().nullable(),
+    quantityAvailable: coerceInt(0).pipe(z.number().min(0)),
+    unit: z.string().optional().default('Piece'),
+    minOrder: coerceInt(1).pipe(z.number().min(1)).optional(),
+    weight: coerceNum(0).pipe(z.number().min(0)).optional(),
     dimensions: z.string().optional(),
+    material: z.string().optional(),
+    warranty: z.string().optional(),
+    origin: z.string().optional(),
     bestFor: z.string().optional(),
-    attributes: z.array(z.object({
+    featured: z.preprocess((v) => v === 'true' || v === true, z.boolean().optional()),
+    trending: z.preprocess((v) => v === 'true' || v === true, z.boolean().optional()),
+    attributes: z.preprocess((val) => {
+        if (typeof val === 'string') {
+            try { return JSON.parse(val); } catch (e) { return val; }
+        }
+        return val;
+    }, z.array(z.object({
         name: z.string().min(1),
         value: z.string().min(1),
-    })).optional(),
-    variants: z.array(z.any()).optional(),
-    offer: z.object({
-        couponCode: z.string().optional(),
-        description: z.string().optional(),
-        validTill: z.string().optional(),
-    }).optional(),
+    }))).optional(),
     hsn: objectIdSchema.optional(),
-    igstRate: z.number().optional(),
     images: z.array(z.union([z.string().url(), imageSchema])).optional(),
 });
 
@@ -91,7 +121,10 @@ export const bulkUpdateProductsSchema = z.object({
 });
 
 export const updateBasePriceSchema = z.object({
-    basePrice: z.number().min(0),
+    basePrice: z.preprocess(
+        (val) => (val !== undefined && val !== '' ? Number(val) : undefined),
+        z.number().min(0)
+    ),
 });
 
 export const addReviewSchema = z.object({

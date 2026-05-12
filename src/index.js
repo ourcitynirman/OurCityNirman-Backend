@@ -22,8 +22,10 @@ connectDB()
     .then(() => {
         const server = app.listen(PORT, () => {
             console.log(`\n⚙️  Server  →  http://localhost:${PORT}  [${process.env.NODE_ENV}]`);
-            console.log(`🔗  Health  →  http://localhost:${PORT}/api/v1/health\n`);
+            console.log(`🔗  Health  →  http://localhost:${PORT}/api/v1/health`);
+            console.log(`🚀  Backend reloaded at: ${new Date().toLocaleTimeString()}\n`);
         });
+
 
         // ── Graceful Shutdown ──────────────────────────────────────────────
         const shutdown = (signal) => {

@@ -21,8 +21,12 @@ const syncChildren = async (parentId, parentPath, parentAncestors) => {
 };
 
 const formatToTree = (list, parentId = null) => {
+    const pId = parentId ? String(parentId) : null;
     return list
-        .filter(cat => String(cat.parent) === String(parentId))
+        .filter(cat => {
+            const catPId = cat.parent ? String(cat.parent) : null;
+            return catPId === pId;
+        })
         .map(cat => ({
             ...cat,
             children: formatToTree(list, cat._id)
@@ -38,6 +42,16 @@ class CategoryService {
         const list = await Category.find(filter)
             .select('_id name slug image icon productCount isLeaf sortOrder isActive')
             .sort({ sortOrder: 1 }).lean();
+        return list;
+    }
+
+    static async getAllCategories(includeInactive) {
+        const filter = {};
+        if (includeInactive !== 'true') filter.isActive = true;
+
+        const list = await Category.find(filter)
+            .select('_id name slug parent level isActive ancestors')
+            .sort({ level: 1, sortOrder: 1 }).lean();
         return list;
     }
 

@@ -3,7 +3,8 @@ import { authenticate, authorize } from '../../shared/middlewares/auth.middlewar
 import { ROLES } from '../../shared/constants/roles.js';
 import {
     processRefund,
-    getRefundDetails
+    getRefundDetails,
+    listRefunds
 } from './refund.controller.js';
 
 const RefundRouter = Router();
@@ -31,6 +32,17 @@ RefundRouter.get(
     '/:orderId',
     authorize(ROLES.ADMIN, ROLES.USER),
     getRefundDetails
+);
+
+/**
+ * @desc    List all refunds
+ * @route   GET /api/v1/refunds
+ * @access  Private (Admin Only)
+ */
+RefundRouter.get(
+    '/',
+    authorize(ROLES.ADMIN),
+    listRefunds
 );
 
 export default RefundRouter;

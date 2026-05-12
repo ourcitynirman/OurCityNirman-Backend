@@ -5,8 +5,10 @@ import {
     updateShopReview,
     deleteShopReview,
     vendorRespondToShopReview,
+    getVendorMyReviews,
     markHelpful
 } from "./shop-review.controller.js";
+
 import { authenticate, authorize } from "../../shared/middlewares/auth.middleware.js";
 import { upload } from "../../shared/middlewares/multer.middleware.js";
 
@@ -57,6 +59,8 @@ router.post("/:reviewId/helpful", markHelpful);
  * @route   PATCH /api/v1/shop-reviews/vendor/:reviewId/respond
  * @access  Private (Vendor)
  */
+router.get("/vendor/my-reviews", authorize("vendor"), getVendorMyReviews);
 router.patch("/vendor/:reviewId/respond", authorize("vendor"), vendorRespondToShopReview);
+
 
 export default router;

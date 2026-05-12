@@ -38,7 +38,8 @@ export const addToWishlist = asyncHandler(async (req, res, next) => {
             .json(new ApiResponse(200, wishlist, alreadyExists ? "Product already in wishlist" : "Product added to wishlist"));
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
     }
@@ -59,7 +60,8 @@ export const removeFromWishlist = asyncHandler(async (req, res, next) => {
             .json(new ApiResponse(200, wishlist, "Product removed from wishlist"));
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
     }
@@ -92,7 +94,8 @@ export const moveToCart = asyncHandler(async (req, res, next) => {
         );
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
     }
@@ -119,7 +122,8 @@ export const moveToWishlist = asyncHandler(async (req, res, next) => {
         );
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
     }

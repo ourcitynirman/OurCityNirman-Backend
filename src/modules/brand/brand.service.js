@@ -4,7 +4,7 @@ import { ApiError } from "../../shared/utils/api.utils.js";
 
 class BrandService {
     static async getAllBrands(queryData) {
-        const { page, limit, search, isActive } = queryData;
+        const { page, limit, search, isActive, categoryId } = queryData;
         const query = {};
 
         if (search) {
@@ -13,14 +13,17 @@ class BrandService {
         if (isActive !== undefined) {
             query.isActive = isActive === 'true';
         }
+        if (categoryId) {
+            query.categories = categoryId;
+        }
 
         const skip = (page - 1) * limit;
-
         const [brands, total] = await Promise.all([
             Brand.find(query)
                 .sort({ popularityScore: -1, name: 1 })
                 .skip(skip)
                 .limit(limit)
+                .populate("categories", "name")
                 .lean(),
             Brand.countDocuments(query)
         ]);

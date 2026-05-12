@@ -68,6 +68,25 @@ class ShopReviewService {
             isVerifiedPurchase: !!hasPurchased
         });
 
+        // Update Shop rating and stats
+        const starKey = `ratingStats.star${rating}`;
+        await Shop.findByIdAndUpdate(shopId, {
+            $inc: { 
+                "rating.count": 1,
+                [starKey]: 1
+            }
+        });
+
+        // Re-calculate average rating (simplified for now, can be done more precisely with aggregation)
+        const updatedShop = await Shop.findById(shopId).lean();
+        const stats = updatedShop.ratingStats || {};
+        const totalPoints = (stats.star5*5) + (stats.star4*4) + (stats.star3*3) + (stats.star2*2) + (stats.star1*1);
+        const totalCount = (stats.star5 + stats.star4 + stats.star3 + stats.star2 + stats.star1) || 1;
+        
+        await Shop.findByIdAndUpdate(shopId, {
+            "rating.average": totalPoints / totalCount
+        });
+
         await review.populate("userId", "fullName email avatar");
         return shapeReview(review);
     }
@@ -83,7 +102,7 @@ class ShopReviewService {
             rating_low: { rating: 1, createdAt: -1 },
         };
 
-        const [reviews, totalReviews] = await Promise.all([
+        const [reviews, totalReviews, shop] = await Promise.all([
             ShopReview.find(filter)
                 .populate("userId", "fullName email avatar")
                 .sort(sortOptions[sort] || sortOptions.recent)
@@ -91,10 +110,22 @@ class ShopReviewService {
                 .limit(limit)
                 .lean(),
             ShopReview.countDocuments(filter),
+            Shop.findById(shopId).select("rating ratingStats").lean()
         ]);
 
         return {
             reviews: reviews.map(shapeReview),
+            stats: {
+                averageRating: shop?.rating?.average || 0,
+                totalReviews: shop?.rating?.count || totalReviews,
+                ratingBreakdown: {
+                    5: shop?.ratingStats?.star5 || 0,
+                    4: shop?.ratingStats?.star4 || 0,
+                    3: shop?.ratingStats?.star3 || 0,
+                    2: shop?.ratingStats?.star2 || 0,
+                    1: shop?.ratingStats?.star1 || 0,
+                }
+            },
             pagination: {
                 totalReviews,
                 totalPages: Math.ceil(totalReviews / limit),
@@ -166,6 +197,16 @@ class ShopReviewService {
         if (!review) throw new ApiError(404, "Review not found.");
         return review.helpfulVotes;
     }
+
+    static async getVendorMyReviews(vendorId, query) {
+        const { default: Shop } = await import("../shop/shop.model.js");
+        const shop = await Shop.findOne({ vendor: vendorId });
+        if (!shop) throw new ApiError(404, "Shop not found");
+
+        return this.getShopReviews(shop._id, query);
+    }
 }
+
+
 
 export default ShopReviewService;

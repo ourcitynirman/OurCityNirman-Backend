@@ -26,9 +26,11 @@ import invoiceRouter      from './modules/invoice/invoice.route.js';
 import refundRouter       from './modules/refund/refund.route.js';
 import paymentRouter      from './modules/payment/payment.route.js';
 
-import vendorRouter       from './modules/vendor/vendor.route.js';
-import shopRouter         from './modules/shop/shop.route.js';
+import { ShopRouter, VendorRouter, AdminShopRouter } from './modules/shop/shop.route.js';
 import shopReviewRouter   from './modules/shop-review/shop-review.route.js';
+import vendorProfileRouter from './modules/vendor-profile/vendor-profile.route.js';
+
+
 
 import adminRouter        from './modules/admin/admin.route.js';
 import sliderRouter       from './modules/homeslider/homeslider.route.js';
@@ -159,20 +161,21 @@ export function registerRoutes(app) {
      */
     app.use('/api/v1/payments', paymentRouter);
 
-    // ── Vendor ────────────────────────────────────────────────────────────────
+    // ── Vendor & Shop (Unified Domain) ────────────────────────────────────────
     /**
      * @prefix  /api/v1/vendor
      * @access  Private (Vendor — verified)
-     * @desc    Vendor dashboard stats, inventory report, order management
+     * @desc    Vendor dashboard stats, inventory report, order management, shop profile
      */
-    app.use('/api/v1/vendor', vendorRouter);
+    app.use('/api/v1/vendor', VendorRouter);
 
     /**
      * @prefix  /api/v1/shop
      * @access  Public (read) | Private/Vendor (write) | Private/Admin (moderate)
-     * @desc    Shop creation, profile update, verification, reviews
+     * @desc    Shop creation, profile update, verification, reviews, and admin management
      */
-    app.use('/api/v1/shop', shopRouter);
+    app.use('/api/v1/shop', ShopRouter);
+    app.use('/api/v1/shop/admin', AdminShopRouter);
 
     /**
      * @prefix  /api/v1/shop-reviews
@@ -180,6 +183,15 @@ export function registerRoutes(app) {
      * @desc    Customer reviews for vendor shops
      */
     app.use('/api/v1/shop-reviews', shopReviewRouter);
+
+    /**
+     * @prefix  /api/v1/vendor-profile
+     * @access  Private (Vendor/Admin)
+     * @desc    Professional vendor profile, KYC, and bank details
+     */
+    app.use('/api/v1/vendor-profile', vendorProfileRouter);
+
+
 
     // ── Admin ─────────────────────────────────────────────────────────────────
     /**

@@ -15,7 +15,7 @@ export const createHSNSchema = z.object({
 
 export const getAllHSNQuerySchema = z.object({
     page: z.preprocess((val) => (val ? parseInt(val, 10) : 1), z.number().int().min(1)),
-    limit: z.preprocess((val) => (val ? parseInt(val, 10) : 10), z.number().int().min(1).max(100)),
+    limit: z.preprocess((val) => (val ? parseInt(val, 10) : 10), z.number().int().min(1).max(1000)),
     search: z.string().optional(),
     gst_rate: z.preprocess((val) => (val ? parseInt(val, 10) : undefined), z.number().optional()),
     category: z.string().optional(),

@@ -48,7 +48,7 @@ const brandSchema = new mongoose.Schema({
 brandSchema.index({ name: "text", description: "text" });
 
 // Auto-generate slug before saving
-brandSchema.pre("save", function (next) {
+brandSchema.pre("save", async function () {
   if (this.isModified("name") || !this.slug) {
     this.slug = this.name
       .toLowerCase()
@@ -57,7 +57,6 @@ brandSchema.pre("save", function (next) {
       .replace(/-+/g, "-")
       .trim();
   }
-  next();
 });
 
 const Brand = mongoose.models.Brand || mongoose.model("Brand", brandSchema);
