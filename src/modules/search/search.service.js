@@ -124,6 +124,17 @@ class SearchService {
         return { query: keyword, products: formattedProducts, brands: formattedBrands, categories: formattedCategories, total: formattedProducts.length + formattedBrands.length + formattedCategories.length };
     }
 
+    static async logRecentlyViewed(productId) {
+        const product = await Product.findOne({ _id: productId, isActive: true }).select('_id name').lean();
+        if (!product) {
+            throw new ApiError(404, 'Product not found or inactive');
+        }
+        
+        // Potential for future metrics tracking (view counts, etc)
+        // For now, we just ensure the ID is valid for the public frontend to store
+        return { success: true };
+    }
+
     static async getRecentlyViewed(productIds) {
         const limitedIds = productIds.slice(0, 20);
         const productsRaw = await Product.find({ _id: { $in: limitedIds }, isActive: true }).select('name slug images price originalPrice discount brand category rating reviewCount inStock quantityAvailable featured').lean();

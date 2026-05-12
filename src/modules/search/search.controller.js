@@ -36,9 +36,11 @@ export const getSearchSuggestions = asyncHandler(async (req, res, next) => {
  */
 export const logRecentlyViewed = asyncHandler(async (req, res, next) => {
     try {
-        const { productId } = logRecentlyViewedSchema.parse(req.body);
-        // Business logic was minimal in controller, just confirming existence
-        // In service we could do more, but for now we just return success
+        const { productId } = logRecentlyViewedSchema.parse(req.body || {});
+        
+        // Validate product existence and potentially track metrics
+        await SearchService.logRecentlyViewed(productId);
+
         return res.status(200).json(new ApiResponse(200, { logged: true, productId }, 'View logged'));
     } catch (err) {
         if (err.name === 'ZodError') {
@@ -46,7 +48,7 @@ export const logRecentlyViewed = asyncHandler(async (req, res, next) => {
             return next(new ApiError(400, 'Validation Error: ' + messages));
         }
         next(err);
-    }
+    } 
 });
 
 /**
