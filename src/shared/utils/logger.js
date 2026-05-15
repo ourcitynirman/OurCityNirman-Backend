@@ -9,7 +9,7 @@ const customFormat = printf(({ level, message, timestamp, metadata }) => {
     }
     return msg;
 });
-
+  
 const logger = winston.createLogger({
     level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
     format: combine(
