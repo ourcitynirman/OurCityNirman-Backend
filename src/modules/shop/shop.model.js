@@ -146,6 +146,7 @@ const shopSchema = new mongoose.Schema(
         verificationDocs: {
             gstDocument: { type: String, default: null },
             panDocument: { type: String, default: null },
+            shopPhoto: { type: String, default: null },
             otherDocument: { type: String, default: null },
             submittedAt: { type: Date, default: null },
         },

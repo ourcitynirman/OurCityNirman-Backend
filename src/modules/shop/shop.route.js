@@ -42,13 +42,18 @@ const ShopRouter = Router();
 // ─── Shared Middlewares ──────────────────────────────────────────────────────
 
 const shopUpload = upload.fields([
-    { name: "logo",   maxCount: 1 },
-    { name: "banner", maxCount: 1 },
+    { name: "logo",          maxCount: 1 },
+    { name: "banner",        maxCount: 1 },
+    { name: "gstDocument",   maxCount: 1 },
+    { name: "panDocument",   maxCount: 1 },
+    { name: "shopPhoto",     maxCount: 1 },
+    { name: "otherDocument", maxCount: 1 },
 ]);
 
 const verificationUpload = upload.fields([
     { name: "gstDocument",   maxCount: 1 },
     { name: "panDocument",   maxCount: 1 },
+    { name: "shopPhoto",     maxCount: 1 },
     { name: "otherDocument", maxCount: 1 },
 ]);
 

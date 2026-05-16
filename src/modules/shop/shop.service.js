@@ -50,13 +50,41 @@ class ShopService {
         if (files?.logo?.[0]?.path) logoUrl = await uploadFile(files.logo[0].path, "shops/logos");
         if (files?.banner?.[0]?.path) bannerUrl = await uploadFile(files.banner[0].path, "shops/banners");
 
+        // Process verification documents if provided during registration
+        let gstUrl = null;
+        let panUrl = null;
+        let otherUrl = null;
+        let vStatus = "not_requested";
+
+        if (files?.gstDocument?.[0]?.path) gstUrl = await uploadFile(files.gstDocument[0].path, "shops/verification/gst");
+        if (files?.panDocument?.[0]?.path) panUrl = await uploadFile(files.panDocument[0].path, "shops/verification/pan");
+        if (files?.shopPhoto?.[0]?.path) {
+            const photoUrl = await uploadFile(files.shopPhoto[0].path, "shops/verification/photos");
+            var shopPhotoUrl = photoUrl;
+        }
+        if (files?.otherDocument?.[0]?.path) otherUrl = await uploadFile(files.otherDocument[0].path, "shops/verification/other");
+
+        if (gstUrl || panUrl || shopPhotoUrl || otherUrl) vStatus = "pending";
+
         const shop = await Shop.create({
             ...shopData,
             vendor: user._id,
             shopCode,
             logo: logoUrl,
             banner: bannerUrl,
-            verificationHistory: [{ action: "requested", performedByRole: "system", note: "Shop created — awaiting verification request from vendor" }],
+            verificationStatus: vStatus,
+            verificationDocs: (gstUrl || panUrl || shopPhotoUrl || otherUrl) ? {
+                gstDocument: gstUrl,
+                panDocument: panUrl,
+                shopPhoto: shopPhotoUrl,
+                otherDocument: otherUrl,
+                submittedAt: new Date()
+            } : undefined,
+            verificationHistory: [{ 
+                action: vStatus === "pending" ? "requested" : "requested", 
+                performedByRole: "system", 
+                note: vStatus === "pending" ? "Shop created with verification documents" : "Shop created — awaiting verification request from vendor" 
+            }],
         });
 
         return shop;
@@ -78,14 +106,23 @@ class ShopService {
 
         const gstPath = files?.gstDocument?.[0]?.path;
         const panPath = files?.panDocument?.[0]?.path;
+        const photoPath = files?.shopPhoto?.[0]?.path;
         const otherPath = files?.otherDocument?.[0]?.path;
 
-        if (!gstPath && !panPath) {
-            throw new ApiError(400, "Please upload at least one document (GST or PAN) to request verification");
+        const hasNewDoc = gstPath || panPath || photoPath || otherPath;
+        const hasExistingDoc = 
+            shop.verificationDocs?.gstDocument || 
+            shop.verificationDocs?.panDocument || 
+            shop.verificationDocs?.shopPhoto || 
+            shop.verificationDocs?.otherDocument;
+
+        if (!hasNewDoc && !hasExistingDoc) {
+            throw new ApiError(400, "Please upload at least one document (GST, PAN, Shop Photo, or Other) to request verification");
         }
 
         let gstUrl = shop.verificationDocs?.gstDocument || null;
         let panUrl = shop.verificationDocs?.panDocument || null;
+        let photoUrl = shop.verificationDocs?.shopPhoto || null;
         let otherUrl = shop.verificationDocs?.otherDocument || null;
 
         if (gstPath) {
@@ -95,6 +132,10 @@ class ShopService {
         if (panPath) {
             if (panUrl) await safeDelete(panUrl);
             panUrl = await uploadFile(panPath, "shops/verification/pan");
+        }
+        if (photoPath) {
+            if (photoUrl) await safeDelete(photoUrl);
+            photoUrl = await uploadFile(photoPath, "shops/verification/photos");
         }
         if (otherPath) {
             if (otherUrl) await safeDelete(otherUrl);
@@ -110,7 +151,13 @@ class ShopService {
         shop.verificationResolvedBy = null;
         shop.rejectionReason = null;
         shop.verificationAttempts = (shop.verificationAttempts || 0) + 1;
-        shop.verificationDocs = { gstDocument: gstUrl, panDocument: panUrl, otherDocument: otherUrl, submittedAt: new Date() };
+        shop.verificationDocs = { 
+            gstDocument: gstUrl, 
+            panDocument: panUrl, 
+            shopPhoto: photoUrl,
+            otherDocument: otherUrl, 
+            submittedAt: new Date() 
+        };
 
         shop.verificationHistory.push({
             action,
@@ -154,6 +201,12 @@ class ShopService {
         if (files?.banner?.[0]?.path) { await safeDelete(shop.banner); shop.banner = await uploadFile(files.banner[0].path, "shops/banners"); }
 
         await shop.save();
+        
+        await shop.populate([
+            { path: "vendor", select: "fullName email avatar" },
+            { path: "category", select: "name slug icon" }
+        ]);
+
         return shop;
     }
 
@@ -169,6 +222,7 @@ class ShopService {
             safeDelete(shop.logo), safeDelete(shop.banner),
             safeDelete(shop.verificationDocs?.gstDocument),
             safeDelete(shop.verificationDocs?.panDocument),
+            safeDelete(shop.verificationDocs?.shopPhoto),
             safeDelete(shop.verificationDocs?.otherDocument),
         ]);
         await Shop.findByIdAndDelete(shopId);
