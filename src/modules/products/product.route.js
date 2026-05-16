@@ -25,6 +25,7 @@ import {
   toggleProductStatus,
   toggleFeatured,
   toggleTrending,
+  getProductPriceRange,
 } from "./product.controller.js";
 import { updateStock as updateProductStock } from "../inventory/inventory.controller.js";
 import {
@@ -62,6 +63,7 @@ const ProductsRoute = express.Router();
  * @access  Public
  */
 ProductsRoute.get('/', optionalJWT, publicLimiter, getAllProducts);
+ProductsRoute.get('/public/list', optionalJWT, publicLimiter, getAllProducts);
 
 /**
  * @desc    Full-text search for products with filters and sorting
@@ -143,11 +145,19 @@ ProductsRoute.get('/offers', publicLimiter, getOfferProducts);
 ProductsRoute.get('/filters/brands', publicLimiter, getAllBrands);
 
 /**
+ * @desc    Get min/max price range for products based on filters
+ * @route   GET /api/v1/products/price-range
+ * @access  Public
+ */
+ProductsRoute.get('/price-range', publicLimiter, getProductPriceRange);
+
+/**
  * @desc    Get single product by MongoDB ID
  * @route   GET /api/v1/products/id/:id
  * @access  Public
  */
 ProductsRoute.get('/id/:id', publicLimiter, getProductById);
+ProductsRoute.get('/public/details/:id', publicLimiter, getProductById);
 
 /**
  * @desc    Get single product by SEO slug

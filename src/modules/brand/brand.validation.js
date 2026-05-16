@@ -17,6 +17,7 @@ export const brandQuerySchema = z.object({
     search: z.string().trim().optional(),
     isActive: z.enum(["true", "false"]).optional(),
     categoryId: z.string().optional(),
+    category_id: z.string().optional(),
 });
 
 export const brandIdParamSchema = z.object({

@@ -288,5 +288,15 @@ export const updateProductRating = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, { rating: newRating }, "Product rating updated successfully"));
 });
 
+/**
+ * @desc    Get min/max price range for products based on category/brand
+ * @route   GET /api/v1/products/price-range
+ * @access  Public
+ */
+export const getProductPriceRange = asyncHandler(async (req, res) => {
+    const range = await ProductService.getPriceRange(req.query);
+    return res.status(200).json(new ApiResponse(200, range, "Price range fetched successfully"));
+});
+
 // --- SEARCH CONTROLLER RE-EXPORT ---
 export { SearchProducts } from '../search/search.controller.js';

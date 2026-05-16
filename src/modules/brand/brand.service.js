@@ -1,10 +1,11 @@
+import mongoose from "mongoose";
 import Brand from "./brand.model.js";
 import Category from "../category/category.model.js";
 import { ApiError } from "../../shared/utils/api.utils.js";
 
 class BrandService {
     static async getAllBrands(queryData) {
-        const { page, limit, search, isActive, categoryId } = queryData;
+        const { page = 1, limit = 50, search, isActive, categoryId, category_id } = queryData;
         const query = {};
 
         if (search) {
@@ -13,8 +14,15 @@ class BrandService {
         if (isActive !== undefined) {
             query.isActive = isActive === 'true';
         }
-        if (categoryId) {
-            query.categories = categoryId;
+        const effectiveCatId = category_id || categoryId;
+        if (effectiveCatId) {
+            if (mongoose.Types.ObjectId.isValid(effectiveCatId)) {
+                query.categories = effectiveCatId;
+            } else {
+                const cat = await Category.findOne({ slug: effectiveCatId }).select('_id');
+                if (cat) query.categories = cat._id;
+                else query.categories = new mongoose.Types.ObjectId(); // force empty if not found
+            }
         }
 
         const skip = (page - 1) * limit;

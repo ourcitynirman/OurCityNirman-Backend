@@ -532,6 +532,42 @@ class ProductService {
         await product.updateRating(Number(rating));
         return product.rating;
     }
+
+    static async getPriceRange(queryData) {
+        const { category, brand } = queryData;
+        const filter = { isActive: true };
+
+        if (category) {
+            const cat = await mongoose.model("Category").findOne({ 
+                $or: [{ _id: mongoose.isValidObjectId(category) ? category : null }, { slug: category }] 
+            }).select('_id');
+            if (cat) filter.category = cat._id;
+        }
+        
+        if (brand) {
+            filter.brand = { $in: brand.split(',') };
+        }
+
+        const result = await Product.aggregate([
+            { $match: filter },
+            {
+                $group: {
+                    _id: null,
+                    minPrice: { $min: "$price" },
+                    maxPrice: { $max: "$price" }
+                }
+            }
+        ]);
+
+        if (result.length === 0) {
+            return { minPrice: 0, maxPrice: 1000000 };
+        }
+
+        return {
+            minPrice: result[0].minPrice,
+            maxPrice: result[0].maxPrice
+        };
+    }
 }
 
 export default ProductService;
