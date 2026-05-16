@@ -31,7 +31,30 @@ class InvoiceService {
 
             const enrichedItems = await Promise.all(items.map(async (item) => {
                 const product = await Product.findById(item.product).select('hsn igstRate').populate('hsn');
-                let hsnObject = product?.hsn || await HSN.findOne({ hsn_code: "0000" }) || await HSN.create({ hsn_code: "0000", description: "Default HSN", category: "Default", gst_rate: 18 });
+                
+                let hsnObject = product?.hsn;
+                if (!hsnObject) {
+                    hsnObject = await HSN.findOne({ hsn_code: "0000" });
+                }
+                
+                if (!hsnObject) {
+                    try {
+                        const Category = (await import('../category/category.model.js')).default;
+                        const fallbackCat = await Category.findOne();
+                        if (fallbackCat) {
+                            hsnObject = await HSN.create({ 
+                                hsn_code: "0000", 
+                                description: "Default HSN", 
+                                category: fallbackCat._id, 
+                                gst_rate: 18,
+                                unit: "pcs"
+                            });
+                        }
+                    } catch (err) {
+                        console.error("Failed to create fallback HSN:", err.message);
+                    }
+                }
+
                 const igstRate = hsnObject?.gst_rate ?? product?.igstRate ?? 18;
                 const taxableValuePerUnit = item.price / (1 + (igstRate / 100));
                 
