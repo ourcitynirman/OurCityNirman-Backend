@@ -48,21 +48,34 @@ class BrandService {
     }
 
     static async getBrandsByCategory(categoryId) {
-        const category = await Category.findById(categoryId).select('_id ancestors').lean();
-        if (!category) {
+        // Resolve category first (handle slug or ID)
+        let cat;
+        if (mongoose.Types.ObjectId.isValid(categoryId)) {
+            cat = await Category.findById(categoryId).select('_id path').lean();
+        } else {
+            cat = await Category.findOne({ slug: categoryId }).select('_id path').lean();
+        }
+
+        if (!cat) {
             throw new ApiError(404, "Category not found");
         }
 
-        const categoryIds = [
-            category._id,
-            ...(category.ancestors ? category.ancestors.map(a => a._id) : [])
-        ];
+        // Find all subcategories (self + descendants using path prefix)
+        const subCats = await Category.find({
+            $or: [
+                { _id: cat._id },
+                { path: new RegExp(`^${cat.path}/`) }
+            ]
+        }).select('_id').lean();
+
+        const categoryIds = subCats.map(c => c._id);
 
         const brands = await Brand.find({
             categories: { $in: categoryIds },
             isActive: true
         })
-            .select("name slug logo popularityScore")
+            .select("name slug logo popularityScore categories")
+            .populate("categories", "name")
             .sort({ popularityScore: -1, name: 1 })
             .lean();
 
