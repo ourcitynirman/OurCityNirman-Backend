@@ -160,15 +160,39 @@ class AdminService {
         if (category) filter.category = category;
         if (brand) filter.brand = brand;
         if (vendorId) filter.vendorId = vendorId;
-        if (isActive !== undefined) filter.isActive = isActive === 'true';
-        if (isApproved !== undefined) filter.isApproved = isApproved === 'true';
-        if (isFeatured !== undefined) filter.featured = isFeatured === 'true';
+        
+        // Handle boolean filters carefully
+        if (isActive === 'true') filter.isActive = true;
+        if (isActive === 'false') filter.isActive = false;
+        
+        // Handle status/approval filters
+        if (isApproved === 'true' || isApproved === 'approved') filter.status = 'approved';
+        else if (isApproved === 'false' || isApproved === 'pending') filter.status = 'pending';
+        else if (isApproved === 'rejected') filter.status = 'rejected';
+        else if (query.status) filter.status = query.status;
+
+        if (isFeatured === 'true') filter.featured = true;
+        if (query.trending === 'true') filter.trending = true;
+        if (query.popular === 'true') filter.isPopular = true;
+
         if (search) {
-            filter.$or = [{ name: { $regex: search, $options: 'i' } }];
+            filter.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { slug: { $regex: search, $options: 'i' } },
+                { description: { $regex: search, $options: 'i' } }
+            ];
         }
 
         const [products, total] = await Promise.all([
-            Product.find(filter).sort(sort).skip(skip).limit(limit).select('-reviews -__v').populate('vendorId', 'fullName email').lean(),
+            Product.find(filter)
+                .sort(sort)
+                .skip(skip)
+                .limit(limit)
+                .select('-reviews -__v')
+                .populate('vendorId', 'fullName email')
+                .populate('category', 'name slug')
+                .populate('brand', 'name slug')
+                .lean(),
             Product.countDocuments(filter),
         ]);
 
@@ -178,10 +202,11 @@ class AdminService {
     static async approveProduct(productId, req) {
         const product = await Product.findById(productId);
         if (!product) throw new ApiError(404, 'Product not found');
-        if (product.isApproved) return product;
 
+        product.status = 'approved';
         product.isApproved = true;
         product.isActive = true;
+        product.rejectionReason = null;
         await product.save();
 
         await createAuditLog(req, {
@@ -194,10 +219,50 @@ class AdminService {
         return product;
     }
 
+    static async rejectProduct(productId, reason, req) {
+        const product = await Product.findById(productId);
+        if (!product) throw new ApiError(404, 'Product not found');
+
+        product.status = 'rejected';
+        product.isApproved = false;
+        product.isActive = false;
+        product.rejectionReason = reason;
+        await product.save();
+
+        await createAuditLog(req, {
+            action: 'REJECT_PRODUCT',
+            resourceType: 'Product',
+            resourceId: product._id,
+            details: `Rejected product: ${product.name}. Reason: ${reason}`
+        });
+
+        return product;
+    }
+
+    static async updatePromotionalStatus(productId, type, value, req) {
+        const product = await Product.findById(productId);
+        if (!product) throw new ApiError(404, 'Product not found');
+
+        if (type === 'featured') product.featured = value;
+        else if (type === 'trending') product.trending = value;
+        else if (type === 'popular') product.isPopular = value;
+        
+        await product.save();
+
+        await createAuditLog(req, {
+            action: 'UPDATE_PROMOTIONAL',
+            resourceType: 'Product',
+            resourceId: product._id,
+            details: `Updated ${type} to ${value} for ${product.name}`
+        });
+
+        return product;
+    }
+
     static async bulkApproveProducts(productIds, req) {
         const result = await Product.updateMany(
-            { _id: { $in: productIds }, isApproved: false },
-            { $set: { isApproved: true, isActive: true } }
+            { _id: { $in: productIds } },
+            { $set: { status: 'approved', isApproved: true, isActive: true, rejectionReason: null } }
         );
 
         await createAuditLog(req, {

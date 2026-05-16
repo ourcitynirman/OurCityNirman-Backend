@@ -219,6 +219,41 @@ export const toggleTrending = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc    Approve product (Admin only)
+ * @route   PATCH /api/v1/products/:id/approve
+ * @access  Private (Admin)
+ */
+export const approveProduct = asyncHandler(async (req, res) => {
+    const { id } = productIdParamSchema.parse(req.params);
+    const product = await ProductService.approveProduct(id, req.user);
+    return res.status(200).json(new ApiResponse(200, product, "Product approved successfully"));
+});
+
+/**
+ * @desc    Reject product (Admin only)
+ * @route   PATCH /api/v1/products/:id/reject
+ * @access  Private (Admin)
+ */
+export const rejectProduct = asyncHandler(async (req, res) => {
+    const { id } = productIdParamSchema.parse(req.params);
+    const { reason } = req.body;
+    const product = await ProductService.rejectProduct(id, reason, req.user);
+    return res.status(200).json(new ApiResponse(200, product, "Product rejected successfully"));
+});
+
+/**
+ * @desc    Update promotional status (Admin only)
+ * @route   PATCH /api/v1/products/:id/promotional
+ * @access  Private (Admin)
+ */
+export const updatePromotionalStatus = asyncHandler(async (req, res) => {
+    const { id } = productIdParamSchema.parse(req.params);
+    const { type, value } = req.body;
+    const product = await ProductService.updatePromotionalStatus(id, type, value, req.user);
+    return res.status(200).json(new ApiResponse(200, product, "Promotional status updated successfully"));
+});
+
+/**
  * @desc    Update product base price
  * @route   PATCH /api/v1/products/:id/base-price
  * @access  Private (Vendor/Admin)

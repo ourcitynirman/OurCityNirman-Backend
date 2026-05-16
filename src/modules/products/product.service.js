@@ -24,8 +24,19 @@ class ProductService {
             after
         } = queryData;
 
-        const isAdminOrVendor = user && ['admin', 'vendor'].includes(user.role);
-        const query = isAdminOrVendor ? {} : { isActive: true };
+        const isAdmin = user && user.role === 'admin';
+        const isVendor = user && user.role === 'vendor';
+        
+        // Default filter for public users: only active AND approved products
+        let query = { isActive: true, status: 'approved' };
+        
+        // If Admin or Vendor, they can see non-approved/inactive based on query params
+        if (isAdmin || isVendor) {
+            query = {}; // Start fresh
+            if (queryData.status) query.status = queryData.status;
+            if (queryData.isActive !== undefined) query.isActive = queryData.isActive === 'true';
+            if (isVendor) query.vendorId = user._id; // Vendors only see their own
+        }
 
         const categoryFilter = await resolveCategoryFilter(category);
         Object.assign(query, categoryFilter);
@@ -420,21 +431,47 @@ class ProductService {
         return product.trending;
     }
 
-    static async updateBasePrice(id, basePrice, user) {
+    static async approveProduct(id, user) {
+        if (user.role !== 'admin') throw new ApiError(403, 'Admin only');
         const product = await Product.findById(id);
         if (!product) throw new ApiError(404, 'Product not found');
         
-        if (product.vendorId.toString() !== user._id.toString() && user.role !== 'admin') 
-            throw new ApiError(403, 'Unauthorized');
-            
-        product.basePrice = Number(basePrice);
+        product.status = 'approved';
+        product.isApproved = true;
+        product.rejectionReason = null;
+        product.isActive = true; // Ensure it's active when approved
         await product.save();
-        return product.basePrice;
+        return product;
+    }
+
+    static async rejectProduct(id, reason, user) {
+        if (user.role !== 'admin') throw new ApiError(403, 'Admin only');
+        const product = await Product.findById(id);
+        if (!product) throw new ApiError(404, 'Product not found');
+        
+        product.status = 'rejected';
+        product.isApproved = false;
+        product.rejectionReason = reason;
+        await product.save();
+        return product;
+    }
+
+    static async updatePromotionalStatus(id, type, value, user) {
+        if (user.role !== 'admin') throw new ApiError(403, 'Admin only');
+        const product = await Product.findById(id);
+        if (!product) throw new ApiError(404, 'Product not found');
+        
+        if (type === 'featured') product.featured = value;
+        if (type === 'trending') product.trending = value;
+        if (type === 'popular') product.isPopular = value;
+        
+        await product.save();
+        return product;
     }
 
     static async getProductStats(user) {
         const isAdmin = user.role === 'admin';
-        const matchFilter = isAdmin ? { isActive: true } : { vendorId: new mongoose.Types.ObjectId(user._id), isActive: true };
+        const matchFilter = isAdmin ? {} : { vendorId: new mongoose.Types.ObjectId(user._id) };
         
         const [stats, categoryStats, brandStats, topPerformingProducts] = await Promise.all([
             Product.aggregate([
@@ -448,10 +485,13 @@ class ProductService {
                         totalValue: { $sum: { $multiply: [{ $ifNull: ['$price', 0] }, { $ifNull: ['$quantityAvailable', 0] }] } },
                         inStockProducts: { $sum: { $cond: ['$inStock', 1, 0] } },
                         outOfStockProducts: { $sum: { $cond: ['$inStock', 0, 1] } },
+                        pendingProducts: { $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] } },
+                        rejectedProducts: { $sum: { $cond: [{ $eq: ['$status', 'rejected'] }, 1, 0] } },
+                        approvedProducts: { $sum: { $cond: [{ $eq: ['$status', 'approved'] }, 1, 0] } },
                         featuredProducts: { $sum: { $cond: ['$featured', 1, 0] } },
                         trendingProducts: { $sum: { $cond: ['$trending', 1, 0] } },
+                        popularProducts: { $sum: { $cond: ['$isPopular', 1, 0] } },
                         lowStockProducts: { $sum: { $cond: [{ $and: ['$inStock', { $lte: ['$quantityAvailable', 50] }] }, 1, 0] } },
-                        // Margin Calculation: ((Price - BasePrice) / Price) * 100
                         avgMargin: {
                             $avg: {
                                 $cond: [

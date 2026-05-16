@@ -125,7 +125,8 @@ class SearchService {
     }
 
     static async logRecentlyViewed(productId) {
-        const product = await Product.findOne({ _id: productId, isActive: true }).select('_id name').lean();
+        const filter = mongoose.Types.ObjectId.isValid(productId) ? { _id: productId } : { slug: productId };
+        const product = await Product.findOne({ ...filter, isActive: true }).select('_id name').lean();
         if (!product) {
             throw new ApiError(404, 'Product not found or inactive');
         }
@@ -137,21 +138,49 @@ class SearchService {
 
     static async getRecentlyViewed(productIds) {
         const limitedIds = productIds.slice(0, 20);
-        const productsRaw = await Product.find({ _id: { $in: limitedIds }, isActive: true }).select('name slug images price originalPrice discount brand category rating reviewCount inStock quantityAvailable featured').lean();
+        const ids = [];
+        const slugs = [];
+        limitedIds.forEach(val => {
+            if (mongoose.Types.ObjectId.isValid(val)) ids.push(val);
+            else slugs.push(val);
+        });
+
+        const productsRaw = await Product.find({ 
+            $or: [{ _id: { $in: ids } }, { slug: { $in: slugs } }],
+            isActive: true 
+        }).select('name slug images price originalPrice discount brand category rating reviewCount inStock quantityAvailable featured').lean();
+
         const populatedProducts = await populateCategoriesOnProducts(productsRaw);
 
-        const productMap = new Map(populatedProducts.map((p) => [p._id.toString(), p]));
+        const productMap = new Map();
+        populatedProducts.forEach(p => {
+            productMap.set(p._id.toString(), p);
+            productMap.set(p.slug, p);
+        });
+
         const orderedProducts = limitedIds.map((id) => productMap.get(id.toString())).filter(Boolean);
 
         return { products: orderedProducts, count: orderedProducts.length, validIds: orderedProducts.map((p) => p._id.toString()) };
     }
 
     static async compareProducts(productIds) {
-        const productsRaw = await Product.find({ _id: { $in: productIds }, isActive: true }).select('-__v').lean();
+        const ids = [];
+        const slugs = [];
+        productIds.forEach(val => {
+            if (mongoose.Types.ObjectId.isValid(val)) ids.push(val);
+            else slugs.push(val);
+        });
+
+        const productsRaw = await Product.find({
+            $or: [{ _id: { $in: ids } }, { slug: { $in: slugs } }],
+            isActive: true 
+        }).select('-__v').lean();
+
         if (productsRaw.length !== productIds.length) {
             const foundIds = new Set(productsRaw.map((p) => p._id.toString()));
-            const missingIds = productIds.filter((id) => !foundIds.has(id.toString()));
-            throw new ApiError(404, `Products not found: ${missingIds.join(', ')}`);
+            const foundSlugs = new Set(productsRaw.map((p) => p.slug));
+            const missing = productIds.filter((id) => !foundIds.has(id.toString()) && !foundSlugs.has(id));
+            if (missing.length) throw new ApiError(404, `Products not found: ${missing.join(', ')}`);
         }
 
         const populatedProducts = await populateCategoriesOnProducts(productsRaw);

@@ -22,10 +22,13 @@ import {
   getOfferProducts,
   addProductReview,
   updateProductRating,
-  toggleProductStatus,
-  toggleFeatured,
   toggleTrending,
+  toggleFeatured,
+  toggleProductStatus,
   getProductPriceRange,
+  approveProduct,
+  rejectProduct,
+  updatePromotionalStatus
 } from "./product.controller.js";
 import { updateStock as updateProductStock } from "../inventory/inventory.controller.js";
 import {
@@ -157,7 +160,7 @@ ProductsRoute.get('/price-range', publicLimiter, getProductPriceRange);
  * @access  Public
  */
 ProductsRoute.get('/id/:id', publicLimiter, getProductById);
-ProductsRoute.get('/public/details/:id', publicLimiter, getProductById);
+ProductsRoute.get('/public/details/:identifier', publicLimiter, getProductByIdentifier);
 
 /**
  * @desc    Get single product by SEO slug
@@ -278,5 +281,26 @@ ProductsRoute.patch('/:id/review', verifyJWT, authorize('admin'), addProductRevi
  * @access  Private/Admin
  */
 ProductsRoute.patch('/:id/rating', verifyJWT, authorize('admin'), updateProductRating);
+
+/**
+ * @desc    Approve a product for public display
+ * @route   PATCH /api/v1/products/:id/approve
+ * @access  Private/Admin
+ */
+ProductsRoute.patch('/:id/approve', verifyJWT, authorize('admin'), approveProduct);
+
+/**
+ * @desc    Reject a product listing
+ * @route   PATCH /api/v1/products/:id/reject
+ * @access  Private/Admin
+ */
+ProductsRoute.patch('/:id/reject', verifyJWT, authorize('admin'), rejectProduct);
+
+/**
+ * @desc    Update promotional status (featured/trending/popular)
+ * @route   PATCH /api/v1/products/:id/promotional
+ * @access  Private/Admin
+ */
+ProductsRoute.patch('/:id/promotional', verifyJWT, authorize('admin'), updatePromotionalStatus);
 
 export default ProductsRoute;

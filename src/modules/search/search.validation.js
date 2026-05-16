@@ -11,15 +11,15 @@ export const searchSuggestionsQuerySchema = z.object({
 });
 
 export const logRecentlyViewedSchema = z.object({
-    productId: objectIdSchema,
+    productId: z.string().min(1),
 });
 
 export const getRecentlyViewedSchema = z.object({
-    productIds: z.array(objectIdSchema).min(1, "At least one product ID is required"),
+    productIds: z.array(z.string()).min(1, "At least one product ID is required"),
 });
 
 export const compareProductsSchema = z.object({
-    productIds: z.array(objectIdSchema).min(2, "At least 2 products required for comparison").max(4, "Maximum 4 products allowed"),
+    productIds: z.array(z.string()).min(2, "At least 2 products required for comparison").max(4, "Maximum 4 products allowed"),
 });
 
 export const searchProductsQuerySchema = z.object({

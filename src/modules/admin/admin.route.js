@@ -15,6 +15,8 @@ import {
     getAdminProducts,
     approveProduct,
     blockProduct,
+    rejectProduct,
+    updatePromotionalStatus,
 
     // Orders
     getAdminOrders,
@@ -134,6 +136,20 @@ AdminRouter.patch('/products/:id/approve', approveProduct);
  * @access  Private (Admin)
  */
 AdminRouter.patch('/products/bulk-approve', bulkApproveProducts);
+
+/**
+ * @desc    Reject a product listing with a specific reason
+ * @route   PATCH /api/v1/admin/products/:id/reject
+ * @access  Private (Admin)
+ */
+AdminRouter.patch('/products/:id/reject', rejectProduct);
+
+/**
+ * @desc    Update promotional status (Featured, Trending, Popular)
+ * @route   PATCH /api/v1/admin/products/:id/promotional
+ * @access  Private (Admin)
+ */
+AdminRouter.patch('/products/:id/promotional', updatePromotionalStatus);
 
 /**
  * @desc    Block a product listing due to policy violations or quality issues

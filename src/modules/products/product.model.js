@@ -133,6 +133,21 @@ const productSchema = new mongoose.Schema({
     default: false,
     index: true
   },
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending',
+    index: true
+  },
+  rejectionReason: {
+    type: String,
+    trim: true
+  },
+  isPopular: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
 
   // PRICING & INVENTORY
   price: { type: Number, required: true, index: true },

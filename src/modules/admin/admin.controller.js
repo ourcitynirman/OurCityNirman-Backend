@@ -153,6 +153,36 @@ export const bulkApproveProducts = asyncHandler(async (req, res, next) => {
 });
 
 /**
+ * @desc    Reject product
+ */
+export const rejectProduct = asyncHandler(async (req, res, next) => {
+    try {
+        const { id } = idParamSchema.parse(req.params);
+        const { reason } = req.body;
+        const product = await AdminService.rejectProduct(id, reason, req);
+        return res.status(200).json(new ApiResponse(200, product, 'Product rejected successfully'));
+    } catch (err) {
+        if (err.name === 'ZodError') return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+        next(err);
+    }
+});
+
+/**
+ * @desc    Update promotional status
+ */
+export const updatePromotionalStatus = asyncHandler(async (req, res, next) => {
+    try {
+        const { id } = idParamSchema.parse(req.params);
+        const { type, value } = req.body;
+        const product = await AdminService.updatePromotionalStatus(id, type, value, req);
+        return res.status(200).json(new ApiResponse(200, product, 'Promotional status updated'));
+    } catch (err) {
+        if (err.name === 'ZodError') return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+        next(err);
+    }
+});
+
+/**
  * @desc    Block product
  */
 export const blockProduct = asyncHandler(async (req, res, next) => {
