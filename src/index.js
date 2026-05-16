@@ -37,13 +37,17 @@ connectDB()
                 console.log('✅  HTTP server closed.');
                 process.exit(0);
             });
+
             // Force exit if server doesn't close within 10 s
+
             setTimeout(() => {
                 console.error('❌  Forced shutdown after timeout.');
                 process.exit(1);
             }, 10_000).unref();
         };
 
+
+        
         process.on('SIGTERM', () => shutdown('SIGTERM'));
         process.on('SIGINT',  () => shutdown('SIGINT'));
 

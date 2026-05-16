@@ -20,6 +20,7 @@ export const getAllBrands = async (req, res) => {
     }
 };
 
+
 /**
  * @desc    Get brands by category
  */
