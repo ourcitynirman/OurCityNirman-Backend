@@ -16,6 +16,10 @@ class WishlistService {
             .populate({
                 path: "items.product",
                 select: "name price originalPrice discount rating reviews images slug inStock quantityAvailable isActive brand category",
+                populate: [
+                    { path: "brand", select: "name" },
+                    { path: "category", select: "name" }
+                ]
             })
             .lean();
 
