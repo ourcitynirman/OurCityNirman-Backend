@@ -172,8 +172,13 @@ class AdminService {
         else if (query.status) filter.status = query.status;
 
         if (isFeatured === 'true') filter.featured = true;
+        if (isFeatured === 'false') filter.featured = false;
+
         if (query.trending === 'true') filter.trending = true;
+        if (query.trending === 'false') filter.trending = false;
+
         if (query.popular === 'true') filter.isPopular = true;
+        if (query.popular === 'false') filter.isPopular = false;
 
         if (search) {
             filter.$or = [

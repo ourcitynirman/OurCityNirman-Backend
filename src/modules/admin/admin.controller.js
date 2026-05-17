@@ -4,6 +4,7 @@ import { ApiResponse } from '../../shared/utils/api.utils.js';
 import AdminService from './admin.service.js';
 import { 
     getUsersQuerySchema, 
+    getAdminProductsQuerySchema,
     idParamSchema, 
     blockProductSchema, 
     getAdminOrdersQuerySchema, 
@@ -115,7 +116,7 @@ export const blockVendor = asyncHandler(async (req, res, next) => {
  */
 export const getAdminProducts = asyncHandler(async (req, res, next) => {
     try {
-        const queryData = getUsersQuerySchema.parse(req.query);
+        const queryData = getAdminProductsQuerySchema.parse(req.query);
         const result = await AdminService.getAdminProducts(queryData);
         return res.status(200).json(new ApiResponse(200, result, "Products fetched successfully"));
     } catch (err) {

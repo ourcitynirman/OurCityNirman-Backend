@@ -15,6 +15,22 @@ export const getUsersQuerySchema = z.object({
     sort: z.string().optional().default("-createdAt"),
 });
 
+export const getAdminProductsQuerySchema = z.object({
+    page: z.preprocess((val) => (val ? parseInt(val, 10) : 1), z.number().int().min(1)),
+    limit: z.preprocess((val) => (val ? parseInt(val, 10) : 10), z.number().int().min(1).max(100)),
+    category: z.string().optional(),
+    brand: z.string().optional(),
+    vendorId: z.string().optional(),
+    isActive: z.enum(["true", "false"]).optional(),
+    isApproved: z.enum(["true", "false", "pending", "approved", "rejected"]).optional(),
+    isFeatured: z.enum(["true", "false"]).optional(),
+    trending: z.enum(["true", "false"]).optional(),
+    popular: z.enum(["true", "false"]).optional(),
+    status: z.string().optional(),
+    search: z.string().optional(),
+    sort: z.string().optional().default("-createdAt"),
+});
+
 export const idParamSchema = z.object({
     id: objectIdSchema,
 });

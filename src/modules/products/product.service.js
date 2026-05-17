@@ -391,9 +391,16 @@ class ProductService {
         if (user.role !== 'admin') throw new ApiError(403, 'Admin only');
         
         const allowed = {};
-        ['featured', 'trending', 'isActive', 'discount'].forEach(f => {
+        ['featured', 'trending', 'isActive', 'discount', 'isPopular', 'isApproved', 'status'].forEach(f => {
             if (updates[f] !== undefined) allowed[f] = updates[f];
         });
+
+        if (allowed.status === 'approved') {
+            allowed.isApproved = true;
+            allowed.isActive = true;
+        } else if (allowed.status === 'rejected' || allowed.status === 'pending') {
+            allowed.isApproved = false;
+        }
         
         const result = await Product.updateMany({ _id: { $in: productIds } }, { $set: allowed });
         return result.modifiedCount;

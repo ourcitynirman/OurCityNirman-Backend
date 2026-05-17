@@ -117,6 +117,9 @@ export const bulkUpdateProductsSchema = z.object({
         trending: z.boolean().optional(),
         isActive: z.boolean().optional(),
         discount: z.number().optional(),
+        isPopular: z.boolean().optional(),
+        isApproved: z.boolean().optional(),
+        status: z.enum(['pending', 'approved', 'rejected']).optional(),
     }),
 });
 
