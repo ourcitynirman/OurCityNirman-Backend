@@ -35,13 +35,29 @@ const invoiceItemSchema = new mongoose.Schema(
             type: Number,
             required: true
         },
+        cgstRate: {
+            type: Number,
+            default: 0
+        },
+        cgstAmount: {
+            type: Number,
+            default: 0
+        },
+        sgstRate: {
+            type: Number,
+            default: 0
+        },
+        sgstAmount: {
+            type: Number,
+            default: 0
+        },
         igstRate: {
             type: Number,
-            default: 18
+            default: 0
         },
         igstAmount: {
             type: Number,
-            required: true
+            default: 0
         },
         total: {
             type: Number,

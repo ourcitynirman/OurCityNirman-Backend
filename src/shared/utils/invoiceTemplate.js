@@ -6,6 +6,11 @@ export const generateInvoiceHtml = (data) => {
         paymentMethod, razorpayPaymentId
     } = data;
 
+    const isInterState = items.some(item => (item.igstAmount || 0) > 0);
+    const totalCGST = items.reduce((sum, item) => sum + (item.cgstAmount || 0), 0);
+    const totalSGST = items.reduce((sum, item) => sum + (item.sgstAmount || 0), 0);
+    const totalIGST = items.reduce((sum, item) => sum + (item.igstAmount || 0), 0);
+
     const formatDate = (date) => new Date(date).toLocaleDateString('en-IN', {
         day: '2-digit', month: 'short', year: 'numeric'
     });
@@ -21,7 +26,12 @@ export const generateInvoiceHtml = (data) => {
             <td style="padding: 8px; text-align: right;">₹${item.grossAmount.toFixed(2)}</td>
             <td style="padding: 8px; text-align: right;">₹${item.discount.toFixed(2)}</td>
             <td style="padding: 8px; text-align: right;">₹${item.taxableValue.toFixed(2)}</td>
-            <td style="padding: 8px; text-align: right;">${item.igstRate}% (₹${item.igstAmount.toFixed(2)})</td>
+            ${isInterState ? `
+                <td style="padding: 8px; text-align: right;">${item.igstRate}% (₹${item.igstAmount.toFixed(2)})</td>
+            ` : `
+                <td style="padding: 8px; text-align: right;">${item.cgstRate}% (₹${item.cgstAmount.toFixed(2)})</td>
+                <td style="padding: 8px; text-align: right;">${item.sgstRate}% (₹${item.sgstAmount.toFixed(2)})</td>
+            `}
             <td style="padding: 8px; text-align: right; font-weight: bold;">₹${item.total.toFixed(2)}</td>
         </tr>
     `).join('');
@@ -121,7 +131,12 @@ export const generateInvoiceHtml = (data) => {
                     <th style="text-align: right;">Rate</th>
                     <th style="text-align: right;">Disc.</th>
                     <th style="text-align: right;">Taxable</th>
-                    <th style="text-align: right;">IGST</th>
+                    ${isInterState ? `
+                        <th style="text-align: right;">IGST</th>
+                    ` : `
+                        <th style="text-align: right;">CGST</th>
+                        <th style="text-align: right;">SGST</th>
+                    `}
                     <th style="text-align: right;">Total</th>
                 </tr>
             </thead>
@@ -135,10 +150,21 @@ export const generateInvoiceHtml = (data) => {
                 <span>Sub-total (Excl. Tax)</span>
                 <span>₹${subtotal.toFixed(2)}</span>
             </div>
-            <div class="summary-row">
-                <span>Total IGST (Tax)</span>
-                <span>₹${totalTax.toFixed(2)}</span>
-            </div>
+            ${isInterState ? `
+                <div class="summary-row">
+                    <span>Total IGST (Tax)</span>
+                    <span>₹${totalIGST.toFixed(2)}</span>
+                </div>
+            ` : `
+                <div class="summary-row">
+                    <span>Total CGST</span>
+                    <span>₹${totalCGST.toFixed(2)}</span>
+                </div>
+                <div class="summary-row">
+                    <span>Total SGST</span>
+                    <span>₹${totalSGST.toFixed(2)}</span>
+                </div>
+            `}
             <div class="summary-row">
                 <span>Shipping & Delivery</span>
                 <span>₹${deliveryCharge.toFixed(2)}</span>

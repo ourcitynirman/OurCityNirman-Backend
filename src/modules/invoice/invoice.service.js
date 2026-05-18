@@ -2,6 +2,11 @@ import puppeteer from 'puppeteer';
 import Invoice from './invoice.model.js';
 import InvoiceItem from './invoice-item.model.js';
 import HSN from '../hsn/hsn.model.js';
+import {
+    getStateFromGSTIN,
+    isInterStateTransaction,
+    calculateGSTBreakdown
+} from '../../shared/utils/gst.utils.js';
 import { Counter } from '../../shared/models/counter.model.js';
 import { uploadStream } from '../../shared/utils/cloudinary.js';
 import { sendMail } from '../../shared/services/mail.service.js';
@@ -29,8 +34,39 @@ class InvoiceService {
             const sequencePart = String(counter.seq).padStart(3, '0');
             const invoiceNumber = `INV-${datePart}-${sequencePart}`;
 
+            // 1. Identify Seller Info (Vendor details)
+            let sellerInfo = {
+                name: process.env.SELLER_NAME || "OurCityNirman Pvt. Ltd.",
+                address: process.env.SELLER_ADDRESS || "At - Simanpur, Post - Sadipur, Ps - Pirpainti, Dist - Bhagalpur",
+                city: process.env.SELLER_CITY || "Bhagalpur",
+                state: process.env.SELLER_STATE || "Bihar",
+                pincode: process.env.SELLER_PINCODE || "813209",
+                gstin: process.env.SELLER_GSTIN || "YOUR_GSTIN_HERE"
+            };
+
+            const firstVendorId = items[0]?.vendor;
+            if (firstVendorId) {
+                const Shop = (await import('../shop/shop.model.js')).default;
+                const shop = await Shop.findOne({ vendor: firstVendorId });
+                if (shop) {
+                    sellerInfo = {
+                        name: shop.shopname || sellerInfo.name,
+                        address: [shop.address?.landmark, shop.address?.village].filter(Boolean).join(", ") || sellerInfo.address,
+                        city: shop.address?.city || sellerInfo.city,
+                        state: shop.address?.state || sellerInfo.state,
+                        pincode: shop.address?.pincode || sellerInfo.pincode,
+                        gstin: shop.gstNumber || sellerInfo.gstin
+                    };
+                }
+            }
+
+            // 2. Identify States & Transaction Type
+            const vendorState = sellerInfo.state || getStateFromGSTIN(sellerInfo.gstin) || "Bihar";
+            const shippingState = order.deliveryAddress?.state || "Bihar";
+            const isInter = isInterStateTransaction(vendorState, shippingState);
+
             const enrichedItems = await Promise.all(items.map(async (item) => {
-                const product = await Product.findById(item.product).select('hsn igstRate').populate('hsn');
+                const product = await Product.findById(item.product).select('hsn').populate('hsn');
                 
                 let hsnObject = product?.hsn;
                 if (!hsnObject) {
@@ -55,42 +91,29 @@ class InvoiceService {
                     }
                 }
 
-                const igstRate = hsnObject?.gst_rate ?? product?.igstRate ?? 18;
-                const taxableValuePerUnit = item.price / (1 + (igstRate / 100));
+                const gstRate = hsnObject?.gst_rate ?? 18;
+                const breakdown = calculateGSTBreakdown(item.price, item.quantity, gstRate, isInter);
                 
                 return {
-                    description: item.productSnapshot.name, hsn: hsnObject._id, hsnCode: hsnObject.hsn_code,
-                    qty: item.quantity, grossAmount: item.price * item.quantity, discount: 0,
-                    taxableValue: taxableValuePerUnit * item.quantity, igstRate,
-                    igstAmount: (item.price - taxableValuePerUnit) * item.quantity, total: item.price * item.quantity
+                    description: item.productSnapshot.name,
+                    hsn: hsnObject._id,
+                    hsnCode: hsnObject.hsn_code,
+                    qty: item.quantity,
+                    grossAmount: item.price * item.quantity,
+                    discount: 0,
+                    taxableValue: breakdown.taxableValue,
+                    cgstRate: breakdown.cgstRate,
+                    cgstAmount: breakdown.cgstAmount,
+                    sgstRate: breakdown.sgstRate,
+                    sgstAmount: breakdown.sgstAmount,
+                    igstRate: breakdown.igstRate,
+                    igstAmount: breakdown.igstAmount,
+                    total: breakdown.total
                 };
             }));
 
             const subtotal = enrichedItems.reduce((sum, i) => sum + i.taxableValue, 0);
-            const totalTax = enrichedItems.reduce((sum, i) => sum + i.igstAmount, 0);
-
-            let sellerInfo = {
-                name: process.env.SELLER_NAME || "OurCityNirman Pvt. Ltd.",
-                address: process.env.SELLER_ADDRESS || "At - Simanpur, Post - Sadipur, Ps - Pirpainti, Dist - Bhagalpur",
-                city: process.env.SELLER_CITY || "Bhagalpur", state: process.env.SELLER_STATE || "Bihar",
-                pincode: process.env.SELLER_PINCODE || "813209", gstin: process.env.SELLER_GSTIN || "YOUR_GSTIN_HERE"
-            };
-
-            const firstVendorId = items[0]?.vendor;
-            if (firstVendorId) {
-                const Shop = (await import('../shop/shop.model.js')).default;
-                const shop = await Shop.findOne({ vendor: firstVendorId });
-                if (shop) {
-                    sellerInfo = {
-                        name: shop.shopname || sellerInfo.name,
-                        address: shop.address?.landmark || shop.address?.village || sellerInfo.address,
-                        city: shop.address?.city || sellerInfo.city,
-                        state: shop.address?.state || sellerInfo.state,
-                        pincode: shop.address?.pincode || sellerInfo.pincode,
-                        gstin: shop.gstNumber || sellerInfo.gstin
-                    };
-                }
-            }
+            const totalTax = enrichedItems.reduce((sum, i) => sum + (i.cgstAmount + i.sgstAmount + i.igstAmount), 0);
 
             const invoiceData = {
                 invoiceNumber, order: order._id, user: user._id, orderNumber: order.orderNumber, orderDate: order.createdAt, invoiceDate,
@@ -147,7 +170,7 @@ class InvoiceService {
 
         if (!isPurchaser && !isVendor && !isAdmin) throw new ApiError(403, "Access denied");
 
-        let invoice = await Invoice.findOne({ order: orderId });
+        let invoice = await Invoice.findOne({ order: orderId }).populate('items');
         if (!invoice) {
             if (!isPurchaser && !isAdmin) throw new ApiError(404, "Invoice not generated");
             const customer = await User.findById(order.user);
@@ -182,7 +205,7 @@ class InvoiceService {
     }
 
     static async viewInvoice(invoiceId, user) {
-        const invoice = await Invoice.findById(invoiceId);
+        const invoice = await Invoice.findById(invoiceId).populate('items');
         if (!invoice) throw new ApiError(404, "Invoice not found");
 
         const order = await Order.findById(invoice.order);
