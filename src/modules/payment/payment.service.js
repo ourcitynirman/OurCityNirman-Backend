@@ -139,23 +139,56 @@ class PaymentService {
             throw new ApiError(400, 'Invalid signature');
         }
 
-        const session = await mongoose.startSession();
-        try {
-            await session.withTransaction(async () => {
-                for(const order of orders) {
-                    order.paymentStatus = 'paid';
-                    order.razorpayPaymentId = razorpay_payment_id;
-                    order.status = 'confirmed';
-                    order.statusHistory.push({ status: 'confirmed', changedBy: 'system', note: `Paid. ID: ${razorpay_payment_id}` });
-                    await order.save({ session });
-
-                    const items = await OrderItem.find({ order_id: order._id }).session(session);
-                    await Promise.all(items.map(({ product, quantity }) => Product.findByIdAndUpdate(product, { $inc: { quantityAvailable: -quantity } }, { session })));
+        const runUpdates = async (useSession) => {
+            for(const order of orders) {
+                order.paymentStatus = 'paid';
+                order.razorpayPaymentId = razorpay_payment_id;
+                order.status = 'confirmed';
+                order.statusHistory.push({ status: 'confirmed', changedBy: 'system', note: `Paid. ID: ${razorpay_payment_id}` });
+                if (useSession) {
+                    await order.save({ session: useSession });
+                } else {
+                    await order.save();
                 }
-                await Cart.findOneAndUpdate({ user: user._id }, { $set: { items: [], totalPrice: 0, totalItems: 0 } }, { session });
-            });
-        } finally {
-            session.endSession();
+
+                let itemsQuery = OrderItem.find({ order_id: order._id });
+                if (useSession) itemsQuery = itemsQuery.session(useSession);
+                const items = await itemsQuery;
+
+                await Promise.all(items.map(({ product, quantity }) => {
+                    if (useSession) {
+                        return Product.findByIdAndUpdate(product, { $inc: { quantityAvailable: -quantity } }).session(useSession);
+                    } else {
+                        return Product.findByIdAndUpdate(product, { $inc: { quantityAvailable: -quantity } });
+                    }
+                }));
+            }
+            if (useSession) {
+                await Cart.findOneAndUpdate({ user: user._id }, { $set: { items: [], totalPrice: 0, totalItems: 0 } }).session(useSession);
+            } else {
+                await Cart.findOneAndUpdate({ user: user._id }, { $set: { items: [], totalPrice: 0, totalItems: 0 } });
+            }
+        };
+
+        try {
+            const session = await mongoose.startSession();
+            try {
+                await session.withTransaction(async () => {
+                    await runUpdates(session);
+                });
+            } catch (txErr) {
+                if (txErr.message.includes('transaction') || txErr.message.includes('replica set') || txErr.message.includes('ReplicaSet') || txErr.message.includes('not support') || txErr.codeName === 'TransactionSystemFailed') {
+                    console.warn("MongoDB environment does not support transactions, running updates fallback...");
+                    await runUpdates(null);
+                } else {
+                    throw txErr;
+                }
+            } finally {
+                session.endSession();
+            }
+        } catch (sessionErr) {
+            console.warn("Failed to start session, running updates fallback...", sessionErr.message);
+            await runUpdates(null);
         }
 
         orders.forEach(order => { InvoiceService.createAndSendInvoice(order, user).catch(err => console.error(`Invoice failed:`, err)); });

@@ -172,7 +172,12 @@ orderSchema.index({ razorpayPaymentId: 1 });
 // Middleware
 orderSchema.pre('save', function () {
   if (!this.orderNumber) {
-    this.orderNumber = 'ORD-' + nanoid(10).toUpperCase();
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const dateStr = `${yy}${mm}${dd}`;
+    this.orderNumber = `ORD-OCN${dateStr}${nanoid(6).toUpperCase()}`;
   }
 
   if (this.isModified('status') && this.status === 'delivered' && !this.deliveredAt) {

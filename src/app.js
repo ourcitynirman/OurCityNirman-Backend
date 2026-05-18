@@ -93,6 +93,8 @@ app.use(
                         "'self'",
                         "'unsafe-inline'",
                         'https://checkout.razorpay.com',
+                        'https://cdn.razorpay.com',
+                        'https://*.razorpay.com',
                     ],
                     connectSrc: [
                         "'self'",
