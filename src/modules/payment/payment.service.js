@@ -177,8 +177,16 @@ class PaymentService {
                     await runUpdates(session);
                 });
             } catch (txErr) {
-                if (txErr.message.includes('transaction') || txErr.message.includes('replica set') || txErr.message.includes('ReplicaSet') || txErr.message.includes('not support') || txErr.codeName === 'TransactionSystemFailed') {
-                    console.warn("MongoDB environment does not support transactions, running updates fallback...");
+                const txMsg = (txErr.message || '').toLowerCase();
+                const isTxError = !txErr.statusCode && (
+                    txMsg.includes('transaction') ||
+                    txMsg.includes('replica set') ||
+                    txMsg.includes('not support') ||
+                    txErr.codeName === 'TransactionSystemFailed' ||
+                    txErr.name === 'MongoServerError'
+                );
+                if (isTxError) {
+                    console.warn("MongoDB environment does not support transactions or failed, running updates fallback...", txErr.message);
                     await runUpdates(null);
                 } else {
                     throw txErr;

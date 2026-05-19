@@ -60,9 +60,9 @@ export const getMyVerificationStatus = asyncHandler(async (req, res) => {
  * @access  Public
  */
 export const getShopMetadata = asyncHandler(async (req, res) => {
-    const storeTypes = Shop.schema.path("storeType").options.enum.values;
-    const financeOptions = Shop.schema.path("financeOptions").options.enum.values;
-    const days = Shop.schema.path("availability.daysOpen").options.enum.values;
+    const storeTypes = Shop.schema.path("storeType").options.enum?.values || [];
+    const financeOptions = Shop.schema.path("financeOptions").options.enum?.values || Shop.schema.path("financeOptions").caster?.options?.enum?.values || [];
+    const days = Shop.schema.path("availability.daysOpen").options.enum?.values || Shop.schema.path("availability.daysOpen").caster?.options?.enum?.values || [];
     return res.status(200).json(new ApiResponse(200, { storeTypes, financeOptions, days }, "Shop metadata fetched successfully"));
 });
 
