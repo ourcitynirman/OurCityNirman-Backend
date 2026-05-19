@@ -39,7 +39,7 @@ import {
 
 const ShopRouter = Router();
 
-// ─── Shared Middlewares ──────────────────────────────────────────────────────
+// ─── Shared Middlewares ───────────
 
 const shopUpload = upload.fields([
     { name: "logo",          maxCount: 1 },
