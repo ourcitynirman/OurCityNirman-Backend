@@ -187,6 +187,14 @@ const shopSchema = new mongoose.Schema(
             star2: { type: Number, default: 0 },
             star1: { type: Number, default: 0 },
         },
+        positiveRatingsPercentage: { type: Number, default: 0, min: 0, max: 100 },
+
+        yearsInBusiness: { type: Number, default: 0 },
+        responseRate: { type: Number, default: 100, min: 0, max: 100 },
+        supportType: { type: String, default: "Standard" },
+        valuePropositions: { type: [String], default: [] },
+        gallery: { type: [String], default: [] },
+        followerCount: { type: Number, default: 0 },
     },
     { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );

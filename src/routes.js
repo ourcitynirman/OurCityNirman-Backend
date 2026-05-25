@@ -29,12 +29,10 @@ import paymentRouter      from './modules/payment/payment.route.js';
 import { ShopRouter, VendorRouter, AdminShopRouter } from './modules/shop/shop.route.js';
 import shopReviewRouter   from './modules/shop-review/shop-review.route.js';
 import vendorProfileRouter from './modules/vendor-profile/vendor-profile.route.js';
-
-
-
 import adminRouter        from './modules/admin/admin.route.js';
 import sliderRouter       from './modules/homeslider/homeslider.route.js';
 import settingsRouter     from './modules/settings/settings.route.js';
+import shopFollowerRouter from './modules/shop-follower/shop-follower.route.js';
 
 // ── Route Registry ────────────────────────────────────────────────────────────
 /**
@@ -183,6 +181,7 @@ export function registerRoutes(app) {
      * @desc    Customer reviews for vendor shops
      */
     app.use('/api/v1/shop-reviews', shopReviewRouter);
+    app.use('/api/v1/shop-follower', shopFollowerRouter);
 
     /**
      * @prefix  /api/v1/vendor-profile
