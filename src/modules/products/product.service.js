@@ -59,7 +59,9 @@ class ProductService {
         if (bestFor) query.bestFor = { $regex: bestFor, $options: 'i' };
         if (search) query.$text = { $search: search };
         if (offer === 'true') query.discount = { $gt: 0 };
-        if (vendorId) query.vendorId = vendorId;
+        if (vendorId && mongoose.Types.ObjectId.isValid(vendorId)) {
+            query.vendorId = new mongoose.Types.ObjectId(vendorId);
+        }
         if (sku) query.sku = sku.toUpperCase();
 
         const limitNum = limit;
@@ -72,8 +74,9 @@ class ProductService {
         };
         const sortObj = sortMap[sort] || sortMap['-createdAt'];
 
-        if (after) {
-            query._id = sortObj._id === -1 ? { $lt: after } : { $gt: after };
+        if (after && mongoose.Types.ObjectId.isValid(after)) {
+            const afterId = new mongoose.Types.ObjectId(after);
+            query._id = sortObj._id === -1 ? { $lt: afterId } : { $gt: afterId };
         }
         
         const skip = after ? 0 : (page - 1) * limitNum;
