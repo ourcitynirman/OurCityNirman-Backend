@@ -75,6 +75,7 @@ const isDev = process.env.NODE_ENV !== 'production';
 
 app.use(
     helmet({
+        crossOriginResourcePolicy: !isDev,
         contentSecurityPolicy: isDev
             ? false  // Disabled in dev — allows HMR, browser devtools, etc.
             : {

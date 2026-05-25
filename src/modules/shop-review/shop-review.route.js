@@ -6,11 +6,14 @@ import {
     deleteShopReview,
     vendorRespondToShopReview,
     getVendorMyReviews,
-    markHelpful
+    markHelpful,
+    getAdminShopReviews,
+    updateAdminShopReviewStatus
 } from "./shop-review.controller.js";
 
 import { authenticate, authorize } from "../../shared/middlewares/auth.middleware.js";
 import { upload } from "../../shared/middlewares/multer.middleware.js";
+import { ROLES } from "../../shared/constants/roles.js";
 
 const router = Router();
 
@@ -24,6 +27,22 @@ router.get("/shop/:shopId", getShopReviews);
 
 // --- PROTECTED ROUTES ---
 router.use(authenticate);
+
+// --- ADMIN ROUTES ---
+/**
+ * @desc    Get all shop reviews (Admin)
+ * @route   GET /api/v1/shop-reviews/admin/all
+ * @access  Private (Admin)
+ */
+router.get("/admin/all", authorize(ROLES.ADMIN, ROLES.SUPER_ADMIN), getAdminShopReviews);
+
+/**
+ * @desc    Update shop review status (Admin)
+ * @route   PATCH /api/v1/shop-reviews/admin/:reviewId/status
+ * @access  Private (Admin)
+ */
+router.patch("/admin/:reviewId/status", authorize(ROLES.ADMIN, ROLES.SUPER_ADMIN), updateAdminShopReviewStatus);
+
 
 /**
  * @desc    Add a new review for a shop (with optional image uploads)

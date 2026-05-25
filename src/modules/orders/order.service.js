@@ -262,31 +262,22 @@ class OrderService {
             throw new ApiError(400, `Order cannot be cancelled. Current status is "${order.status}"`);
         }
 
-        const session = await mongoose.startSession();
-        try {
-            await session.withTransaction(async () => {
-                await order.cancel(reason, 'user', session);
-                const items = await OrderItem.find({ order_id: order._id }).session(session);
+        await order.cancel(reason, 'user');
+        const items = await OrderItem.find({ order_id: order._id });
 
-                await Promise.all(
-                    items.map((item) =>
-                        Product.findByIdAndUpdate(
-                            item.product,
-                            { $inc: { quantityAvailable: item.quantity } },
-                            { session }
-                        )
-                    )
-                );
+        await Promise.all(
+            items.map((item) =>
+                Product.findByIdAndUpdate(
+                    item.product,
+                    { $inc: { quantityAvailable: item.quantity } }
+                )
+            )
+        );
 
-                await OrderItem.updateMany(
-                    { order_id: order._id },
-                    { $set: { itemStatus: 'cancelled', cancelReason: reason, cancelledAt: new Date() } },
-                    { session }
-                );
-            });
-        } finally {
-            session.endSession();
-        }
+        await OrderItem.updateMany(
+            { order_id: order._id },
+            { $set: { itemStatus: 'cancelled', cancelReason: reason, cancelledAt: new Date() } }
+        );
 
         return order;
     }
@@ -517,25 +508,18 @@ class OrderService {
             throw new ApiError(400, `Order already "${order.status}"`);
         }
 
-        const session = await mongoose.startSession();
-        try {
-            await session.withTransaction(async () => {
-                order.status = 'cancelled';
-                order.cancelReason = reason;
-                order.cancelledBy = 'admin';
-                order.cancelledAt = new Date();
-                order.adminNotes = `Admin override by ${user._id}: ${reason}`;
+        order.status = 'cancelled';
+        order.cancelReason = reason;
+        order.cancelledBy = 'admin';
+        order.cancelledAt = new Date();
+        order.adminNotes = `Admin override by ${user._id}: ${reason}`;
 
-                order.statusHistory.push({ status: 'cancelled', changedBy: 'admin', note: reason });
-                await order.save({ session });
+        order.statusHistory.push({ status: 'cancelled', changedBy: 'admin', note: reason });
+        await order.save();
 
-                const items = await OrderItem.find({ order_id: order._id }).session(session);
-                await Promise.all(items.map((item) => Product.findByIdAndUpdate(item.product, { $inc: { quantityAvailable: item.quantity } }, { session })));
-                await OrderItem.updateMany({ order_id: order._id }, { $set: { itemStatus: 'cancelled', cancelReason: reason, cancelledAt: new Date() } }, { session });
-            });
-        } finally {
-            session.endSession();
-        }
+        const items = await OrderItem.find({ order_id: order._id });
+        await Promise.all(items.map((item) => Product.findByIdAndUpdate(item.product, { $inc: { quantityAvailable: item.quantity } })));
+        await OrderItem.updateMany({ order_id: order._id }, { $set: { itemStatus: 'cancelled', cancelReason: reason, cancelledAt: new Date() } });
 
         return order;
     }

@@ -166,3 +166,53 @@ export const getVendorMyReviews = asyncHandler(async (req, res, next) => {
         next(err);
     }
 });
+
+/**
+ * @desc    Get all shop reviews for Admin
+ * @route   GET /api/v1/shop-reviews/admin/all
+ * @access  Private (Admin)
+ */
+export const getAdminShopReviews = asyncHandler(async (req, res, next) => {
+    try {
+        const queryData = getShopReviewsQuerySchema.parse(req.query);
+        const result = await ShopReviewService.adminGetAllReviews(queryData);
+
+        return res.status(200).json(
+            new ApiResponse(200, result, "Admin shop reviews fetched successfully.")
+        );
+    } catch (err) {
+        if (err.name === 'ZodError') {
+            const messages = err.errors ? err.errors.map(e => e.message).join(', ') : err.message;
+            return next(new ApiError('Validation Error: ' + messages, 400));
+        }
+        next(err);
+    }
+});
+
+/**
+ * @desc    Update shop review status (Admin)
+ * @route   PATCH /api/v1/shop-reviews/admin/:reviewId/status
+ * @access  Private (Admin)
+ */
+export const updateAdminShopReviewStatus = asyncHandler(async (req, res, next) => {
+    try {
+        const { reviewId } = reviewIdParamSchema.parse(req.params);
+        const { status } = req.body;
+        
+        if (!['active', 'inactive', 'flagged'].includes(status)) {
+            return next(new ApiError('Invalid status value.', 400));
+        }
+        
+        const review = await ShopReviewService.adminUpdateStatus(reviewId, status);
+
+        return res.status(200).json(
+            new ApiResponse(200, review, "Review status updated successfully.")
+        );
+    } catch (err) {
+        if (err.name === 'ZodError') {
+            const messages = err.errors ? err.errors.map(e => e.message).join(', ') : err.message;
+            return next(new ApiError('Validation Error: ' + messages, 400));
+        }
+        next(err);
+    }
+});
