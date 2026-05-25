@@ -200,8 +200,13 @@ class OrderService {
             ...(status ? { status } : {}),
         });
 
+        const populatedOrders = await Promise.all(orders.map(async (order) => {
+            const items = await OrderItem.find({ order_id: order._id }).lean();
+            return { ...order, items };
+        }));
+
         return {
-            orders,
+            orders: populatedOrders,
             total,
             pagination: { page: pageNum, limit: limitNum, pages: Math.ceil(total / limitNum) }
         };
@@ -356,6 +361,23 @@ class OrderService {
         return { order, isFullyDelivered };
     }
 
+    static async resendDeliveryOTP(orderId, user) {
+        const order = await Order.findById(orderId);
+        if (!order) throw new ApiError(404, 'Order not found');
+
+        if (order.status !== 'out_for_delivery') {
+            throw new ApiError(400, 'OTP resend is only allowed for orders with status "out_for_delivery".');
+        }
+
+        if (user.role === ROLES.VENDOR) {
+            const hasItem = await OrderItem.exists({ order_id: order._id, vendor: user._id });
+            if (!hasItem) throw new ApiError(403, 'Access denied');
+        }
+
+        await sendDeliveryOTP(order._id);
+        return { order };
+    }
+
     static async getVendorOrders(query, user) {
         const { page = 1, limit = 10, status } = query;
         const pageNum = Math.max(1, parseInt(page));
@@ -367,10 +389,29 @@ class OrderService {
 
         const pipeline = [
             { $match: matchStage },
-            { $lookup: { from: 'orders', localField: 'order_id', foreignField: '_id', as: 'order' } },
+            {
+                $group: {
+                    _id: '$order_id',
+                    vendorItems: { $push: '$$ROOT' },
+                    vendorSubtotal: { $sum: '$totalPrice' }
+                }
+            },
+            { $lookup: { from: 'orders', localField: '_id', foreignField: '_id', as: 'order' } },
             { $unwind: '$order' },
             {
-                $addFields: {
+                $project: {
+                    _id: '$_id',
+                    orderNumber: '$order.orderNumber',
+                    status: '$order.status',
+                    createdAt: '$order.createdAt',
+                    estimatedDelivery: '$order.estimatedDelivery',
+                    deliveryType: '$order.deliveryType',
+                    paymentMethod: '$order.paymentMethod',
+                    paymentStatus: '$order.paymentStatus',
+                    deliveryAddress: '$order.deliveryAddress',
+                    subtotal: '$vendorSubtotal',
+                    totalAmount: '$order.totalAmount',
+                    items: '$vendorItems',
                     isOverdue: {
                         $and: [
                             { $ne: ['$order.estimatedDelivery', null] },
@@ -391,17 +432,23 @@ class OrderService {
                             else: 0,
                         },
                     },
-                },
+                }
             },
             { $sort: { isOverdue: -1, createdAt: -1 } },
-            { $facet: { data: [{ $skip: skip }, { $limit: limitNum }], total: [{ $count: 'count' }] } },
+            {
+                $facet: {
+                    data: [{ $skip: skip }, { $limit: limitNum }],
+                    total: [{ $count: 'count' }]
+                }
+            }
         ];
 
         const result = await OrderItem.aggregate(pipeline);
+        const total = result[0]?.total?.[0]?.count || 0;
         return {
             orders: result[0]?.data || [],
-            total: result[0]?.total?.[0]?.count || 0,
-            pagination: { page: pageNum, limit: limitNum, pages: Math.ceil((result[0]?.total?.[0]?.count || 0) / limitNum) }
+            total,
+            pagination: { page: pageNum, limit: limitNum, pages: Math.ceil(total / limitNum) }
         };
     }
 
@@ -450,8 +497,13 @@ class OrderService {
             Order.countDocuments(filter),
         ]);
 
+        const populatedOrders = await Promise.all(orders.map(async (order) => {
+            const items = await OrderItem.find({ order_id: order._id }).lean();
+            return { ...order, items };
+        }));
+
         return {
-            orders,
+            orders: populatedOrders,
             total,
             pagination: { page: pageNum, limit: limitNum, pages: Math.ceil(total / limitNum) }
         };

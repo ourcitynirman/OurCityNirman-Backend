@@ -254,3 +254,23 @@ export const adminUpdateOrderStatus = asyncHandler(async (req, res, next) => {
         next(err);
     }
 });
+
+/**
+ * @desc    Resend delivery OTP to customer
+ * @route   POST /api/v1/orders/:orderId/resend-delivery-otp
+ * @access  Private (Vendor/Admin)
+ */
+export const resendDeliveryOrderOTP = asyncHandler(async (req, res, next) => {
+    try {
+        const { orderId } = orderIdParamSchema.parse(req.params);
+        const result = await OrderService.resendDeliveryOTP(orderId, req.user);
+
+        return res.status(200).json(new ApiResponse(200, result, "Delivery OTP resent successfully"));
+    } catch (err) {
+        if (err.name === 'ZodError') {
+            const messages = (err.errors || []).map(e => e.message).join(', ') || err.message;
+            return next(new ApiError(400, 'Validation Error: ' + messages));
+        }
+        next(err);
+    }
+});

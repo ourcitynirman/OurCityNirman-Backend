@@ -15,6 +15,7 @@ import {
     adminGetAllOrders,
     adminCancelOrder,
     verifyDeliveryOrder,
+    resendDeliveryOrderOTP,
 } from './order.controller.js';
 import { ALL_ROLES, ROLES } from '../../shared/constants/roles.js';
 
@@ -57,6 +58,18 @@ OrderRouter.post(
     authenticate,
     authorize(ROLES.VENDOR, ROLES.ADMIN),
     verifyDeliveryOrder
+);
+
+/**
+ * @desc    Resend delivery OTP
+ * @route   POST /api/v1/orders/:orderId/resend-delivery-otp
+ * @access  Private (Vendor/Admin)
+ */
+OrderRouter.post(
+    '/:orderId/resend-delivery-otp',
+    authenticate,
+    authorize(ROLES.VENDOR, ROLES.ADMIN),
+    resendDeliveryOrderOTP
 );
 
 /**
