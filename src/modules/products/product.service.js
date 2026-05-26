@@ -25,17 +25,15 @@ class ProductService {
         } = queryData;
 
         const isAdmin = user && user.role === 'admin';
-        const isVendor = user && user.role === 'vendor';
         
         // Default filter for public users: only active AND approved products
         let query = { isActive: true, status: 'approved' };
         
-        // If Admin or Vendor, they can see non-approved/inactive based on query params
-        if (isAdmin || isVendor) {
+        // If Admin, they can see non-approved/inactive based on query params
+        if (isAdmin) {
             query = {}; // Start fresh
             if (queryData.status) query.status = queryData.status;
             if (queryData.isActive !== undefined) query.isActive = queryData.isActive === 'true';
-            if (isVendor) query.vendorId = user._id; // Vendors only see their own
         }
 
         const categoryFilter = await resolveCategoryFilter(category);
