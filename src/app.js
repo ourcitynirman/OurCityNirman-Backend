@@ -116,23 +116,10 @@ app.use(
 );
 
 // ─── BODY PARSERS ────────────────────────────────────────────────────────────
-app.use(express.json({ limit: '100mb' }));
-app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
-// // ─── DATA SANITIZATION ─────────────────────────────────────────────────────
-// // Data sanitization against NoSQL query injection
-// app.use(mongoSanitize());
-
-// // Data sanitization against XSS
-// app.use(xss());
-
-// // ─── CSRF PROTECTION ────────────────────────────────────────────────────────
-// // csurf is deprecated and can cause issues with Postman/development. 
-// // For production, ensure you have a robust CSRF strategy if using cookies.
-// ─── CSRF TOKEN PROVIDER ──────────────────────────────────────────────────
-// This satisfies frontend requests for CSRF tokens.
-// Full CSRF protection is currently disabled to simplify development/Postman testing.
 app.get('/api/v1/csrf-token', (req, res) => {
     res.status(200).json({ 
         success: true, 
