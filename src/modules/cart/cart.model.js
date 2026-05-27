@@ -65,6 +65,14 @@ cartSchema.pre('save', function () {
 const PRODUCT_FIELDS =
     'name brand price originalPrice discount rating reviews quantityAvailable images inStock isActive slug category';
 
+const POPULATE_PRODUCT = {
+    path: 'items.product',
+    select: PRODUCT_FIELDS,
+    populate: [
+        { path: 'brand', select: 'name slug' },
+        { path: 'category', select: 'name slug' }
+    ]
+};
 
 const getProductId = (productRef) => {
     if (!productRef) return null;
@@ -73,13 +81,10 @@ const getProductId = (productRef) => {
 };
 
 cartSchema.statics.getOrCreate = async function (userId) {
-    let cart = await this.findOne({ user: userId }).populate(
-        'items.product',
-        PRODUCT_FIELDS
-    );
+    let cart = await this.findOne({ user: userId }).populate(POPULATE_PRODUCT);
     if (!cart) {
         cart = await this.create({ user: userId, items: [] });
-        cart = await this.findById(cart._id).populate('items.product', PRODUCT_FIELDS);
+        cart = await this.findById(cart._id).populate(POPULATE_PRODUCT);
     }
     return cart;
 };
@@ -99,7 +104,7 @@ cartSchema.methods.addItem = async function (productId, price, quantity = 1) {
 
     return this.constructor
         .findById(this._id)
-        .populate('items.product', PRODUCT_FIELDS);
+        .populate(POPULATE_PRODUCT);
 };
 
 cartSchema.methods.updateItem = async function (productId, quantity) {
@@ -118,7 +123,7 @@ cartSchema.methods.updateItem = async function (productId, quantity) {
     item.price = product.price;
 
     await this.save();
-    return this.constructor.findById(this._id).populate('items.product', PRODUCT_FIELDS);
+    return this.constructor.findById(this._id).populate(POPULATE_PRODUCT);
 };
 
 cartSchema.methods.removeItem = async function (productId) {
@@ -130,7 +135,7 @@ cartSchema.methods.removeItem = async function (productId) {
 
     return this.constructor
         .findById(this._id)
-        .populate('items.product', PRODUCT_FIELDS);
+        .populate(POPULATE_PRODUCT);
 };
 
 cartSchema.methods.clearCart = async function () {
