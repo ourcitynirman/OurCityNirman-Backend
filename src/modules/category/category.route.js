@@ -16,7 +16,6 @@ import { upload } from "../../shared/middlewares/multer.middleware.js";
 
 const router = Router();
 
-// =============================================================================
 //                              PUBLIC ROUTES
 
 /**
@@ -55,9 +54,7 @@ router.get("/:parentId/children", getChildrenCategories);
 router.get("/:id/breadcrumb", getCategoryBreadcrumb);
 
 
-// =============================================================================
 //                           ADMIN MANAGEMENT ROUTES
-// =============================================================================
 
 /**
  * @desc    Create a new category with optional image upload
