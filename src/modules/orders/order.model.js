@@ -102,8 +102,8 @@ const orderSchema = new mongoose.Schema(
     // Delivery
     deliveryType: {
       type: String,
-      enum: { values: ['standard', 'express', 'same_day'], message: 'Invalid delivery type' },
-      default: 'standard',
+      enum: { values: ['standard', 'express', 'same_day', 'pay_later'], message: 'Invalid delivery type' },
+      default: 'pay_later',
     },
     estimatedDelivery: { type: Date, default: null },
     deliveredAt:       { type: Date, default: null },

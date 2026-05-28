@@ -9,7 +9,7 @@ export const placeOrderSchema = z.object({
     addressId: objectIdSchema,
     paymentMethod: z.enum(["online", "cod"]).default("online"),
     notes: z.string().max(500).optional(),
-    deliveryType: z.enum(["standard", "express", "same_day"]).default("standard"),
+    deliveryType: z.enum(["standard", "express", "same_day", "pay_later"]).default("pay_later"),
 });
 
 export const orderQuerySchema = z.object({

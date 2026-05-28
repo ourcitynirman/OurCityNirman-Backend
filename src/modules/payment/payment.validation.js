@@ -7,7 +7,7 @@ const objectIdSchema = z.string().refine((val) => mongoose.Types.ObjectId.isVali
 
 export const createRazorpayOrderSchema = z.object({
     addressId: objectIdSchema,
-    deliveryType: z.enum(['standard', 'express', 'same_day']).default('standard'),
+    deliveryType: z.enum(['standard', 'express', 'same_day', 'pay_later']).default('standard'),
 });
 
 export const verifyRazorpayPaymentSchema = z.object({

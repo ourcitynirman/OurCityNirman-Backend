@@ -113,7 +113,7 @@ class WishlistService {
         await wishlist.save();
 
         return {
-            cart: CartService.normaliseCart(updatedCart),
+            cart: await CartService.normaliseCart(updatedCart),
             wishlist,
         };
     }
@@ -158,7 +158,7 @@ class WishlistService {
         const updatedCart = await cart.removeItem(pid);
 
         return {
-            cart: CartService.normaliseCart(updatedCart),
+            cart: await CartService.normaliseCart(updatedCart),
             wishlist,
             alreadyInWishlist,
         };

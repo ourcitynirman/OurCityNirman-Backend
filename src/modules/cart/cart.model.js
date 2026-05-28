@@ -63,7 +63,7 @@ cartSchema.pre('save', function () {
 });
 
 const PRODUCT_FIELDS =
-    'name brand price originalPrice discount rating reviews quantityAvailable images inStock isActive slug category';
+    'name brand price originalPrice discount rating reviews quantityAvailable images inStock isActive slug category vendorId';
 
 const POPULATE_PRODUCT = {
     path: 'items.product',

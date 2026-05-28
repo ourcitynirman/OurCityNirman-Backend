@@ -16,7 +16,7 @@ export const createRazorpayOrder = asyncHandler(async (req, res, next) => {
         return res.status(200).json(new ApiResponse(200, result, "Razorpay order created successfully"));
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            return next(new ApiError('Validation Error: ' + (err.errors || err.issues || []).map(e => e.message).join(', '), 400));
         }
         next(err);
     }
@@ -34,7 +34,7 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res, next) => {
         return res.status(200).json(new ApiResponse(200, result, "Payment verified successfully"));
     } catch (err) {
         if (err.name === 'ZodError') {
-            return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
+            return next(new ApiError('Validation Error: ' + (err.errors || err.issues || []).map(e => e.message).join(', '), 400));
         }
         next(err);
     }

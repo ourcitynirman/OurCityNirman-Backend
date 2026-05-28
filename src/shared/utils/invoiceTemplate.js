@@ -167,7 +167,7 @@ export const generateInvoiceHtml = (data) => {
             `}
             <div class="summary-row">
                 <span>Shipping & Delivery</span>
-                <span>₹${deliveryCharge.toFixed(2)}</span>
+                <span style="font-weight: bold; color: #2e7d32;">COLLECTED LATER (EXCL.)</span>
             </div>
             <div class="grand-total">
                 <div style="display: flex; justify-content: space-between;">
@@ -175,6 +175,17 @@ export const generateInvoiceHtml = (data) => {
                     <span>₹${grandTotal.toFixed(2)}</span>
                 </div>
             </div>
+        </div>
+
+        <!-- Delivery Policy Notice -->
+        <div style="margin-top: 25px; border: 1.5px solid #a4b69c; background-color: #f1f8e9; border-radius: 8px; padding: 12px 16px; text-align: left; clear: both;">
+            <div style="font-weight: bold; font-size: 12px; color: #2e7d32; margin-bottom: 6px;">
+                🚚 "DELIVERY CHARGES (PAYABLE AFTER SUCCESSFUL DELIVERY)"
+            </div>
+            <ul style="margin: 0; padding-left: 16px; font-size: 11px; color: #33691e; line-height: 1.6;">
+                <li>Final delivery charges are <b>NOT</b> included in the above online paid total.</li>
+                <li>The final fee will be calculated <b>dynamically</b> and must be paid directly to the delivery partner <b>upon arrival</b> based on actual distance, product weight, <b>loading/unloading</b> requirements, and specific delivery factors (e.g., floor).</li>
+            </ul>
         </div>
 
         <div class="footer">

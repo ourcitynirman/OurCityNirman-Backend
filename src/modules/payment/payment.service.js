@@ -8,14 +8,12 @@ import Product from '../products/product.model.js';
 import Address from '../address/address.model.js';
 import { ApiError } from '../../shared/utils/api.utils.js';
 import InvoiceService from '../invoice/invoice.service.js';
+import Commission from '../orders/commission.model.js';
 
-const DELIVERY_RATES = { standard: 0, express: 99, same_day: 199 };
+const DELIVERY_RATES = { standard: 0, express: 0, same_day: 0, pay_later: 0 };
 
-function calcDeliveryCharge(subtotal, type = 'standard') {
-    if (type === 'standard' || !DELIVERY_RATES[type]) {
-       return subtotal >= 50000 ? 0 : 50; 
-    }
-    return DELIVERY_RATES[type];
+function calcDeliveryCharge(subtotal, type = 'pay_later') {
+    return 0;
 }
 
 class PaymentService {
@@ -28,6 +26,10 @@ class PaymentService {
         const cart = await Cart.findOne({ user: user._id }).populate({
             path: 'items.product',
             select: 'name price images category brand quantityAvailable isActive vendorId',
+            populate: [
+                { path: 'brand', select: 'name' },
+                { path: 'category', select: 'name' }
+            ]
         });
         if (!cart || cart.items.length === 0) throw new ApiError(400, 'Your cart is empty');
 
@@ -43,7 +45,12 @@ class PaymentService {
             orderItems.push({
                 product: product._id,
                 vendor: product.vendorId,
-                productSnapshot: { name: product.name, image: product.images?.[0] ?? null, category: product.category, brand: product.brand },
+                productSnapshot: {
+                    name: product.name,
+                    image: product.images?.[0]?.url || product.images?.[0] || null,
+                    category: product.category?.name || product.category || null,
+                    brand: product.brand?.name || product.brand || null,
+                },
                 quantity: item.quantity,
                 price: product.price,
                 totalPrice: product.price * item.quantity,
@@ -162,6 +169,35 @@ class PaymentService {
                         return Product.findByIdAndUpdate(product, { $inc: { quantityAvailable: -quantity } });
                     }
                 }));
+
+                // Calculate 2% commission
+                const commissionAmount = Math.round(order.subtotal * 0.02 * 100) / 100;
+                const gstRate = 18;
+                const gstAmount = Math.round(commissionAmount * 0.18 * 100) / 100;
+                const totalCommission = commissionAmount + gstAmount;
+
+                const firstVendor = items[0]?.vendor || order.vendor || null;
+
+                const commissionData = {
+                    order_id: order._id,
+                    vendor_id: firstVendor,
+                    commission_type: 'product',
+                    commission_basis: 'percentage',
+                    commission_rate: 2,
+                    base_amount: order.subtotal,
+                    commission_amount: commissionAmount,
+                    gst_rate: gstRate,
+                    gst_amount: gstAmount,
+                    total_commission_amount: totalCommission,
+                    payment_status: 'deducted',
+                    remarks: 'Platform transaction commission (2%)'
+                };
+
+                if (useSession) {
+                    await Commission.create([commissionData], { session: useSession });
+                } else {
+                    await Commission.create(commissionData);
+                }
             }
             if (useSession) {
                 await Cart.findOneAndUpdate({ user: user._id }, { $set: { items: [], totalPrice: 0, totalItems: 0 } }).session(useSession);

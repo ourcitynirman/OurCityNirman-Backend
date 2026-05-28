@@ -92,7 +92,14 @@ orderItemSchema.virtual('isCancellable').get(function () {
 // get all items for a given order
 orderItemSchema.statics.getByOrder = function (orderId) {
   return this.find({ order_id: orderId })
-    .populate('product', 'name images slug')
+    .populate({
+      path: 'product',
+      select: 'name images slug brand category',
+      populate: [
+        { path: 'brand', select: 'name' },
+        { path: 'category', select: 'name' }
+      ]
+    })
     .lean();
 };
 
@@ -105,7 +112,14 @@ orderItemSchema.statics.getVendorItems = function (vendorId, { status, page = 1,
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit)
-    .populate('product', 'name images slug')
+    .populate({
+      path: 'product',
+      select: 'name images slug brand category',
+      populate: [
+        { path: 'brand', select: 'name' },
+        { path: 'category', select: 'name' }
+      ]
+    })
     .populate('order_id', 'orderNumber totalAmount paymentStatus')
     .lean();
 };
@@ -114,7 +128,17 @@ orderItemSchema.statics.getVendorItems = function (vendorId, { status, page = 1,
 orderItemSchema.statics.getUserItems = function (userId, { status } = {}) {
   const filter = { user_id: userId };
   if (status) filter.itemStatus = status;
-  return this.find(filter).sort({ createdAt: -1 }).lean();
+  return this.find(filter)
+    .sort({ createdAt: -1 })
+    .populate({
+      path: 'product',
+      select: 'name images slug brand category',
+      populate: [
+        { path: 'brand', select: 'name' },
+        { path: 'category', select: 'name' }
+      ]
+    })
+    .lean();
 };
 
 // Instance Methods

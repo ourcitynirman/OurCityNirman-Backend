@@ -45,6 +45,89 @@ export const GST_STATE_CODES = {
 export const INDIAN_STATES = Object.values(GST_STATE_CODES);
 
 /**
+ * Resolves Indian State Name from 6-digit PIN code.
+ * @param {String|Number} pincode 
+ * @returns {String} State Name or empty string
+ */
+export function getStateFromPincode(pincode) {
+    if (!pincode) return '';
+    const pinStr = String(pincode).trim().replace(/\D/g, '');
+    if (pinStr.length !== 6) return '';
+    
+    const first2 = parseInt(pinStr.substring(0, 2), 10);
+    const first3 = parseInt(pinStr.substring(0, 3), 10);
+
+    if (first2 === 11) return 'Delhi';
+    if (first2 === 12 || first2 === 13) return 'Haryana';
+    if (first2 === 14 || first2 === 15) return 'Punjab';
+    if (first2 === 16) return 'Chandigarh';
+    if (first2 === 17) return 'Himachal Pradesh';
+    if (first2 === 18 || first2 === 19) return 'Jammu and Kashmir';
+    
+    if (first2 >= 20 && first2 <= 28) {
+        if (first3 >= 248 && first3 <= 263) return 'Uttarakhand';
+        if (first3 === 300) return 'Uttarakhand';
+        return 'Uttar Pradesh';
+    }
+    
+    if (first2 >= 30 && first2 <= 34) return 'Rajasthan';
+    
+    if (first2 >= 36 && first2 <= 39) return 'Gujarat';
+    
+    if (first2 >= 40 && first2 <= 44) {
+        if (first3 === 403) return 'Goa';
+        return 'Maharashtra';
+    }
+    
+    if (first2 >= 45 && first2 <= 49) {
+        if (first2 === 49) return 'Chhattisgarh';
+        return 'Madhya Pradesh';
+    }
+    
+    if (first2 >= 50 && first2 <= 53) {
+        if (first3 >= 500 && first3 <= 509) return 'Telangana';
+        return 'Andhra Pradesh';
+    }
+    
+    if (first2 >= 56 && first2 <= 59) return 'Karnataka';
+    
+    if (first2 >= 60 && first2 <= 64) {
+        if (first3 === 605 || first3 === 609) return 'Puducherry';
+        return 'Tamil Nadu';
+    }
+    
+    if (first2 >= 67 && first2 <= 69) return 'Kerala';
+    
+    if (first2 >= 70 && first2 <= 74) {
+        if (first3 === 737) return 'Sikkim';
+        if (first3 === 744) return 'Andaman and Nicobar Islands';
+        return 'West Bengal';
+    }
+    
+    if (first2 >= 75 && first2 <= 77) return 'Odisha';
+    
+    if (first2 === 78) return 'Assam';
+    
+    if (first2 === 79) {
+        if (first3 >= 790 && first3 <= 792) return 'Arunachal Pradesh';
+        if (first3 === 795) return 'Manipur';
+        if (first3 === 793 || first3 === 794) return 'Meghalaya';
+        if (first3 === 796) return 'Mizoram';
+        if (first3 === 797 || first3 === 798) return 'Nagaland';
+        if (first3 === 799) return 'Tripura';
+        return 'Meghalaya';
+    }
+    
+    if (first2 >= 80 && first2 <= 85) {
+        const jhPrefixes = [814, 815, 816, 825, 826, 827, 828, 829, 831, 832, 833, 834, 835];
+        if (jhPrefixes.includes(first3)) return 'Jharkhand';
+        return 'Bihar';
+    }
+    
+    return '';
+}
+
+/**
  * Normalizes state name to remove spaces, special characters, and casing for safe matching.
  * @param {String} stateName 
  * @returns {String}
@@ -86,13 +169,19 @@ export function getStateFromGSTIN(gstin) {
 
 /**
  * Determines whether a transaction is Inter-State or Intra-State.
+ * Supports validation using pincodes.
  * @param {String} vendorState 
  * @param {String} customerShippingState 
+ * @param {String|Number} vendorPincode 
+ * @param {String|Number} customerPincode 
  * @returns {Boolean} True if Inter-State (IGST), False if Intra-State (CGST + SGST)
  */
-export function isInterStateTransaction(vendorState, customerShippingState) {
-    if (!vendorState || !customerShippingState) return true; // Keep it conservative (default to inter-state)
-    return normalizeStateName(vendorState) !== normalizeStateName(customerShippingState);
+export function isInterStateTransaction(vendorState, customerShippingState, vendorPincode = '', customerPincode = '') {
+    const resolvedVendorState = getStateFromPincode(vendorPincode) || vendorState;
+    const resolvedCustomerState = getStateFromPincode(customerPincode) || customerShippingState;
+    
+    if (!resolvedVendorState || !resolvedCustomerState) return true; // Keep it conservative (default to inter-state)
+    return normalizeStateName(resolvedVendorState) !== normalizeStateName(resolvedCustomerState);
 }
 
 /**

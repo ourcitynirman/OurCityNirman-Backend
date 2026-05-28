@@ -3,8 +3,31 @@ import Product from '../products/product.model.js';
 import { ApiError } from '../../shared/utils/api.utils.js';
 
 class CartService {
-    static normaliseCart(cart) {
+    static async normaliseCart(cart) {
         if (!cart) return { items: [], totalItems: 0, totalPrice: 0 };
+
+        // Extract vendor IDs
+        const vendorIds = (cart.items || [])
+            .map((item) => item.product?.vendorId?.toString())
+            .filter(Boolean);
+
+        // Fetch shops for these vendors
+        let shopMap = {};
+        if (vendorIds.length > 0) {
+            try {
+                const Shop = (await import('../shop/shop.model.js')).default;
+                const shops = await Shop.find({ vendor: { $in: vendorIds } }).lean();
+                for (const shop of shops) {
+                    shopMap[shop.vendor.toString()] = {
+                        pincode: shop.address?.pincode || '',
+                        state: shop.address?.state || '',
+                        shopname: shop.shopname || '',
+                    };
+                }
+            } catch (err) {
+                console.error("Error fetching shops in normaliseCart:", err.message);
+            }
+        }
 
         const items = (cart.items || [])
             .filter((item) => item.product && item.product.isActive !== false)
@@ -16,6 +39,8 @@ class CartService {
                         : p.quantityAvailable <= 5
                         ? 'low_stock'
                         : 'in_stock';
+
+                const shopInfo = p.vendorId ? shopMap[p.vendorId.toString()] : null;
 
                 return {
                     id:            p._id?.toString(),
@@ -32,6 +57,10 @@ class CartService {
                     ratingCount:   p.reviews       ?? 0,
                     stock:         stockStatus,
                     qty:           item.quantity   ?? 1,
+                    vendorId:      p.vendorId?.toString() ?? '',
+                    shopPincode:   shopInfo?.pincode ?? '',
+                    shopState:     shopInfo?.state ?? '',
+                    shopName:      shopInfo?.shopname ?? '',
                 };
             });
 
@@ -44,7 +73,7 @@ class CartService {
 
     static async getCart(userId) {
         const cart = await Cart.getOrCreate(userId);
-        return this.normaliseCart(cart);
+        return await this.normaliseCart(cart);
     }
 
     static async addToCart(userId, productId, quantity) {
@@ -57,7 +86,7 @@ class CartService {
 
         const cart = await Cart.getOrCreate(userId);
         const updatedCart = await cart.addItem(productId, product.price, quantity);
-        return this.normaliseCart(updatedCart);
+        return await this.normaliseCart(updatedCart);
     }
 
     static async updateCartItem(userId, productId, quantity) {
@@ -67,7 +96,7 @@ class CartService {
         const updatedCart = await cart.updateItem(productId, quantity);
         if (!updatedCart) throw new ApiError(404, 'Item not found in cart');
 
-        return this.normaliseCart(updatedCart);
+        return await this.normaliseCart(updatedCart);
     }
 
     static async removeFromCart(userId, productId) {
@@ -80,7 +109,7 @@ class CartService {
         if (!exists) throw new ApiError(404, 'Item not found in cart');
 
         const updatedCart = await cart.removeItem(productId);
-        return this.normaliseCart(updatedCart);
+        return await this.normaliseCart(updatedCart);
     }
 
     static async clearCart(userId) {

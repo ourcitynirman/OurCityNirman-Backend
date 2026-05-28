@@ -63,7 +63,7 @@ class InvoiceService {
             // 2. Identify States & Transaction Type
             const vendorState = sellerInfo.state || getStateFromGSTIN(sellerInfo.gstin) || "Bihar";
             const shippingState = order.deliveryAddress?.state || "Bihar";
-            const isInter = isInterStateTransaction(vendorState, shippingState);
+            const isInter = isInterStateTransaction(vendorState, shippingState, sellerInfo.pincode, order.deliveryAddress?.pincode);
 
             const enrichedItems = await Promise.all(items.map(async (item) => {
                 const product = await Product.findById(item.product).select('hsn').populate('hsn');

@@ -11,15 +11,13 @@ import { sendDeliveryOTP, verifyDeliveryOTP } from '../../shared/services/delive
 
 const DELIVERY_RATES = {
     standard: 0,
-    express: 99,
-    same_day: 199
+    express: 0,
+    same_day: 0,
+    pay_later: 0
 };
 
-function calcDeliveryCharge(subtotal, type = 'standard') {
-    if (type === 'standard' || !DELIVERY_RATES[type]) {
-        return subtotal >= 50000 ? 0 : 50;
-    }
-    return DELIVERY_RATES[type];
+function calcDeliveryCharge(subtotal, type = 'pay_later') {
+    return 0;
 }
 
 class OrderService {
@@ -36,6 +34,10 @@ class OrderService {
         const cart = await Cart.findOne({ user: user._id }).populate({
             path: 'items.product',
             select: 'name price images category brand quantityAvailable isActive vendorId',
+            populate: [
+                { path: 'brand', select: 'name' },
+                { path: 'category', select: 'name' }
+            ]
         });
 
         if (!cart || cart.items.length === 0) throw new ApiError(400, 'Your cart is empty');
@@ -64,9 +66,9 @@ class OrderService {
                 vendor: product.vendorId,
                 productSnapshot: {
                     name: product.name,
-                    image: product.images?.[0] ?? null,
-                    category: product.category,
-                    brand: product.brand,
+                    image: product.images?.[0]?.url || product.images?.[0] || null,
+                    category: product.category?.name || product.category || null,
+                    brand: product.brand?.name || product.brand || null,
                 },
                 quantity: item.quantity,
                 price: product.price,
@@ -177,11 +179,6 @@ class OrderService {
         }
 
         if (createdOrders.length === 0) throw new ApiError(500, 'Order creation failed');
-
-        createdOrders.forEach(order => {
-            InvoiceService.createAndSendInvoice(order, user)
-                .catch(err => console.error(`Post-placement invoice job failed for ${order.orderNumber}:`, err));
-        });
 
         return {
             orders: createdOrders,
