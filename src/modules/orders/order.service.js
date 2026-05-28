@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Order, { calcEstimatedDelivery } from './order.model.js';
 import OrderItem from './order-item.model.js';
+import Commission from './commission.model.js';
 import Cart from '../cart/cart.model.js';
 import Product from '../products/product.model.js';
 import Address from '../address/address.model.js';
@@ -66,7 +67,7 @@ class OrderService {
                 vendor: product.vendorId,
                 productSnapshot: {
                     name: product.name,
-                    image: product.images?.[0]?.url || product.images?.[0] || null,
+                    image: (typeof product.images?.[0] === 'string' ? product.images[0] : (product.images?.[0]?.url || product.images?.[0]?.toObject?.()?.url || null)),
                     category: product.category?.name || product.category || null,
                     brand: product.brand?.name || product.brand || null,
                 },
@@ -223,6 +224,10 @@ class OrderService {
         );
 
         if (isOwner || isAdmin || isSeller) {
+            const commission = await Commission.findOne({ order_id: order._id }).lean();
+            if (commission) {
+                order.commission = commission;
+            }
             return order;
         }
 

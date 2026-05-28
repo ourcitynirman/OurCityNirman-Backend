@@ -47,7 +47,7 @@ class PaymentService {
                 vendor: product.vendorId,
                 productSnapshot: {
                     name: product.name,
-                    image: product.images?.[0]?.url || product.images?.[0] || null,
+                    image: (typeof product.images?.[0] === 'string' ? product.images[0] : (product.images?.[0]?.url || product.images?.[0]?.toObject?.()?.url || null)),
                     category: product.category?.name || product.category || null,
                     brand: product.brand?.name || product.brand || null,
                 },
