@@ -26,6 +26,7 @@ import {
     // Dashboard
     getDashboardStats,
     getFinancialReport,
+    getAnalytics,
     bulkApproveProducts,
 } from './admin.controller.js';
 
@@ -54,6 +55,13 @@ AdminRouter.get('/stats', getDashboardStats);
  * @access  Private (Admin)
  */
 AdminRouter.get('/reports/finance', getFinancialReport);
+
+/**
+ * @desc    Get detailed analytics for the admin dashboard (revenue, commission, top products)
+ * @route   GET /api/v1/admin/analytics
+ * @access  Private (Admin)
+ */
+AdminRouter.get('/analytics', getAnalytics);
 
 // =============================================================================
 //                              USER MANAGEMENT

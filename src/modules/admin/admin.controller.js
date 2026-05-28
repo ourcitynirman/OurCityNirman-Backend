@@ -252,13 +252,17 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
 /**
  * @desc    Get financial report
  */
-export const getFinancialReport = asyncHandler(async (req, res, next) => {
-    try {
-        const queryData = getFinancialReportQuerySchema.parse(req.query);
-        const report = await AdminService.getFinancialReport(queryData);
-        return res.status(200).json(new ApiResponse(200, report, "Financial report generated"));
-    } catch (err) {
-        if (err.name === 'ZodError') return next(new ApiError('Validation Error: ' + err.errors.map(e => e.message).join(', '), 400));
-        next(err);
-    }
+export const getFinancialReport = asyncHandler(async (req, res) => {
+    const report = await AdminService.getFinancialReport(req.query);
+    return res.status(200).json(new ApiResponse(200, report, "Financial report fetched successfully"));
+});
+
+/**
+ * @desc    Get detailed analytics for admin dashboard
+ * @route   GET /api/v1/admin/analytics
+ * @access  Private (Admin)
+ */
+export const getAnalytics = asyncHandler(async (req, res) => {
+    const analytics = await AdminService.getAnalytics(req.query);
+    return res.status(200).json(new ApiResponse(200, analytics, "Analytics fetched successfully"));
 });

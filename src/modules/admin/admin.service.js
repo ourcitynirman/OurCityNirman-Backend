@@ -3,6 +3,9 @@ import Product from '../products/product.model.js';
 import Order from '../orders/order.model.js';
 import OrderItem from '../orders/order-item.model.js';
 import Shop from '../shop/shop.model.js';
+import Commission from '../orders/commission.model.js';
+import Category from '../category/category.model.js';
+import Brand from '../brand/brand.model.js';
 import { ApiError } from '../../shared/utils/api.utils.js';
 import { ROLES } from '../../shared/constants/roles.js';
 import { createAuditLog } from '../../shared/utils/audit.utils.js';
@@ -357,20 +360,40 @@ class AdminService {
         const today = new Date();
         const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(today.getDate() - 7);
+
         const [
-            totalUsers, totalVendors, activeUsers, totalProducts, pendingApproval, totalOrders, monthlyOrders,
-            revenuePipeline, monthlyRevenuePipeline, ordersByStatus,
+            totalUsers, totalVendors, unverifiedVendors, activeUsers, totalProducts, pendingApproval, totalOrders, monthlyOrders,
+            revenuePipeline, monthlyRevenuePipeline, ordersByStatus, recentOrders, recentProducts, dailyOrders, categoryBreakdown
         ] = await Promise.all([
             User.countDocuments({ role: { $ne: ROLES.ADMIN } }),
             User.countDocuments({ role: ROLES.VENDOR }),
+            User.countDocuments({ role: ROLES.VENDOR, isVerified: false }),
             User.countDocuments({ isActive: true, role: { $ne: ROLES.ADMIN } }),
             Product.countDocuments({ isActive: true }),
-            Product.countDocuments({ isApproved: false, isActive: true }),
+            Product.countDocuments({ isApproved: false }),
             Order.countDocuments(),
             Order.countDocuments({ createdAt: { $gte: startOfMonth } }),
             Order.aggregate([{ $match: { status: { $ne: 'cancelled' } } }, { $group: { _id: null, total: { $sum: '$totalAmount' } } }]),
             Order.aggregate([{ $match: { status: { $ne: 'cancelled' }, createdAt: { $gte: startOfMonth } } }, { $group: { _id: null, total: { $sum: '$totalAmount' } } }]),
             Order.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+            Order.find().sort({ createdAt: -1 }).limit(6).populate('user', 'fullName email').select('orderId totalAmount status paymentStatus createdAt'),
+            Product.find().sort({ createdAt: -1 }).limit(6).populate('vendorId', 'fullName shopName').populate('category', 'name').select('name category vendorId basePrice createdAt isApproved'),
+            Order.aggregate([
+                { $match: { createdAt: { $gte: sevenDaysAgo } } },
+                { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, orders: { $sum: 1 }, revenue: { $sum: '$totalAmount' } } },
+                { $sort: { '_id': 1 } }
+            ]),
+            Product.aggregate([
+                { $match: { isActive: true } },
+                { $group: { _id: "$category", count: { $sum: 1 } } },
+                { $sort: { count: -1 } },
+                { $limit: 5 },
+                { $lookup: { from: 'categories', localField: '_id', foreignField: '_id', as: 'categoryData' } },
+                { $unwind: { path: '$categoryData', preserveNullAndEmptyArrays: true } },
+                { $project: { _id: { $ifNull: ['$categoryData.name', 'Unknown'] }, count: 1 } }
+            ])
         ]);
 
         const last6Months = await Order.aggregate([
@@ -383,9 +406,9 @@ class AdminService {
         ordersByStatus.forEach(({ _id, count }) => { statusMap[_id] = count; });
 
         return {
-            users: { total: totalUsers, active: activeUsers, vendors: totalVendors },
-            products: { total: totalProducts, pendingApproval },
-            orders: { total: totalOrders, thisMonth: monthlyOrders, byStatus: statusMap },
+            users: { total: totalUsers, active: activeUsers, vendors: totalVendors, unverifiedVendors },
+            products: { total: totalProducts, pendingApproval, recent: recentProducts, categories: categoryBreakdown },
+            orders: { total: totalOrders, thisMonth: monthlyOrders, byStatus: statusMap, recent: recentOrders, daily: dailyOrders },
             revenue: { total: revenuePipeline[0]?.total ?? 0, thisMonth: monthlyRevenuePipeline[0]?.total ?? 0, last6Months },
         };
     }
@@ -432,6 +455,163 @@ class AdminService {
         return {
             summary: stats[0] || { totalRevenue: 0, totalSubtotal: 0, totalDeliveryCharges: 0, orderCount: 0, avgOrderValue: 0 },
             topVendors: vendorPerformance
+        };
+    }
+
+    static async getAnalytics(query) {
+        const { timeFilter } = query;
+        const now = new Date();
+        let startDate;
+
+        if (timeFilter === 'weekly') {
+            startDate = new Date(now.setDate(now.getDate() - 7));
+        } else if (timeFilter === 'yearly') {
+            startDate = new Date(now.setFullYear(now.getFullYear() - 1));
+        } else {
+            // Default to monthly
+            startDate = new Date(now.setMonth(now.getMonth() - 1));
+        }
+
+        const dateFilter = { createdAt: { $gte: startDate } };
+
+        // 1. Overall stats
+        const commissionStats = await Commission.aggregate([
+            { $match: dateFilter },
+            {
+                $group: {
+                    _id: null,
+                    totalCommissionAmount: { $sum: '$total_commission_amount' },
+                    baseCommission: { $sum: '$commission_amount' },
+                    totalGst: { $sum: '$gst_amount' },
+                    transactionCount: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const orderStats = await Order.aggregate([
+            { $match: { ...dateFilter, status: { $ne: 'cancelled' } } },
+            {
+                $group: {
+                    _id: null,
+                    totalRevenue: { $sum: '$totalAmount' },
+                    totalOrders: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // 2. Trends (group by day or month)
+        const trendGroup = timeFilter === 'yearly' 
+            ? { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } }
+            : { year: { $year: '$createdAt' }, month: { $month: '$createdAt' }, day: { $dayOfMonth: '$createdAt' } };
+
+        const commissionTrends = await Commission.aggregate([
+            { $match: dateFilter },
+            {
+                $group: {
+                    _id: trendGroup,
+                    totalCommission: { $sum: '$total_commission_amount' },
+                    date: { $first: '$createdAt' }
+                }
+            },
+            { $sort: { date: 1 } }
+        ]);
+
+        const revenueTrends = await Order.aggregate([
+            { $match: { ...dateFilter, status: { $ne: 'cancelled' } } },
+            {
+                $group: {
+                    _id: trendGroup,
+                    totalRevenue: { $sum: '$totalAmount' },
+                    totalOrders: { $sum: 1 },
+                    date: { $first: '$createdAt' }
+                }
+            },
+            { $sort: { date: 1 } }
+        ]);
+
+        // 3. Top Products Performance (since commission is order-level, we'll calculate revenue generated per product)
+        const topProducts = await OrderItem.aggregate([
+            { $match: { ...dateFilter, itemStatus: { $ne: 'cancelled' } } },
+            {
+                $group: {
+                    _id: '$product',
+                    revenue: { $sum: '$totalPrice' },
+                    unitsSold: { $sum: '$quantity' }
+                }
+            },
+            { $lookup: { from: 'products', localField: '_id', foreignField: '_id', as: 'productInfo' } },
+            { $unwind: '$productInfo' },
+            { $lookup: { from: 'users', localField: 'productInfo.vendorId', foreignField: '_id', as: 'vendorInfo' } },
+            { $unwind: { path: '$vendorInfo', preserveNullAndEmptyArrays: true } },
+            {
+                $project: {
+                    _id: 1,
+                    revenue: 1,
+                    unitsSold: 1,
+                    productName: '$productInfo.name',
+                    productOwner: '$vendorInfo.fullName',
+                    productImage: {
+                        $let: {
+                            vars: {
+                                firstImg: {
+                                    $cond: {
+                                        if: { $isArray: '$productInfo.images' },
+                                        then: { $arrayElemAt: ['$productInfo.images', 0] },
+                                        else: null
+                                    }
+                                }
+                            },
+                            in: {
+                                $cond: {
+                                    if: { $eq: [{ $type: "$$firstImg" }, "object"] },
+                                    then: "$$firstImg.url",
+                                    else: "$$firstImg"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            { $sort: { revenue: -1 } },
+            { $limit: 10 }
+        ]);
+
+        const [
+            totalUsers,
+            totalVendors,
+            totalShops,
+            totalCategories,
+            totalBrands,
+            totalProductsDb
+        ] = await Promise.all([
+            User.countDocuments({ role: 'user' }),
+            User.countDocuments({ role: 'vendor' }),
+            Shop.countDocuments(),
+            Category.countDocuments(),
+            Brand.countDocuments(),
+            Product.countDocuments()
+        ]);
+
+        return {
+            summary: {
+                totalRevenue: orderStats[0]?.totalRevenue || 0,
+                totalOrders: orderStats[0]?.totalOrders || 0,
+                totalCommission: commissionStats[0]?.totalCommissionAmount || 0,
+                transactionCount: commissionStats[0]?.transactionCount || 0
+            },
+            platform: {
+                users: totalUsers,
+                vendors: totalVendors,
+                shops: totalShops,
+                categories: totalCategories,
+                brands: totalBrands,
+                products: totalProductsDb
+            },
+            trends: {
+                revenue: revenueTrends,
+                commission: commissionTrends
+            },
+            topProducts
         };
     }
 }
