@@ -16,6 +16,7 @@ export const getShopReviewsQuerySchema = z.object({
     page: z.preprocess((val) => (val ? parseInt(val, 10) : 1), z.number().int().min(1)),
     limit: z.preprocess((val) => (val ? parseInt(val, 10) : 10), z.number().int().min(1).max(50)),
     sort: z.enum(["recent", "helpful", "rating_high", "rating_low"]).default("recent"),
+    status: z.enum(["active", "hidden", "flagged"]).optional(),
 });
 
 export const reviewIdParamSchema = z.object({

@@ -33,6 +33,7 @@ import adminRouter        from './modules/admin/admin.route.js';
 import sliderRouter       from './modules/homeslider/homeslider.route.js';
 import settingsRouter     from './modules/settings/settings.route.js';
 import shopFollowerRouter from './modules/shop-follower/shop-follower.route.js';
+import teamRouter         from './modules/team/team.route.js';
 
 // ── Route Registry ────────────────────────────────────────────────────────────
 /**
@@ -207,6 +208,13 @@ export function registerRoutes(app) {
      * @desc    Homepage slider / banner management
      */
     app.use('/api/v1/slider', sliderRouter);
+
+    /**
+     * @prefix  /api/v1/team
+     * @access  Public (read) | Private/Admin (write)
+     * @desc    Team member management
+     */
+    app.use('/api/v1/team', teamRouter);
 
     /**
      * @prefix  /api/v1/settings

@@ -18,8 +18,8 @@ const getDeliveryOTPTemplate = (otp, orderNumber, customerName) => `
   <meta name="x-apple-disable-message-reformatting">
   <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no">
   <title>Delivery Verification OTP – Our City Nirman</title>
-  <!--[if mso]>
-  <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+  <!--[if mso]>OfficeDocumentSettin
+  <noscript><xml><o:gs><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
   <![endif]-->
   <style>
     * { box-sizing: border-box; }
@@ -87,6 +87,7 @@ const getDeliveryOTPTemplate = (otp, orderNumber, customerName) => `
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top: 24px;">
                 <tr>
                   <td style="background-color: #fff7ed; border: 1px solid #fed7aa; border-left: 4px solid #f97316; border-radius: 8px; padding: 14px 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 13px; color: #9a3412; line-height: 1.6; text-align: left;">
+
                     🔒 <strong>Security Notice:</strong> Our City Nirman Pvt. Ltd. will never ask for this OTP over a call, WhatsApp, or SMS. Share this code <strong>only</strong> with the delivery agent physically present at your door.
                   </td>
                 </tr>

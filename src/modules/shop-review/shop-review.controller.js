@@ -199,7 +199,7 @@ export const updateAdminShopReviewStatus = asyncHandler(async (req, res, next) =
         const { reviewId } = reviewIdParamSchema.parse(req.params);
         const { status } = req.body;
         
-        if (!['active', 'inactive', 'flagged'].includes(status)) {
+        if (!['active', 'hidden', 'flagged'].includes(status)) {
             return next(new ApiError('Invalid status value.', 400));
         }
         
