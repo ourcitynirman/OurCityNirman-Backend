@@ -9,137 +9,95 @@ import bcrypt from 'bcryptjs';
  * @desc    Premium Email template for Delivery OTP
  */
 const getDeliveryOTPTemplate = (otp, orderNumber, customerName) => `
-<body style="margin:0; padding:0; background:#eef1f7; font-family:'Segoe UI', Arial, Helvetica, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0">
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no">
+  <title>Delivery Verification OTP – Our City Nirman</title>
+  <!--[if mso]>
+  <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+  <![endif]-->
+  <style>
+    * { box-sizing: border-box; }
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+    body { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+ 
+    @media (prefers-color-scheme: dark) {
+      .dark-bg   { background-color: #1a1a1a !important; }
+      .dark-card { background-color: #2a2a2a !important; }
+      .dark-text { color: #e5e7eb !important; }
+      .dark-muted{ color: #9ca3af !important; }
+      .dark-footer{ background-color: #1f1f1f !important; }
+    }
+ 
+    @media only screen and (max-width: 600px) {
+      .email-container { width: 100% !important; max-width: 100% !important; }
+      .email-body-cell { padding: 24px 16px !important; }
+      .otp-box { font-size: 24px !important; letter-spacing: 6px !important; padding: 14px 20px !important; }
+      .header-cell { padding: 24px 16px !important; }
+      .company-name { font-size: 18px !important; }
+    }
+  </style>
+</head>
+<body class="dark-bg" style="margin:0; padding:0; background-color:#fff7ed; width:100%;">
+  <div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">
+    Your OTP to verify delivery of order #${orderNumber} is ${otp}.
+    &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  </div>
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#fff7ed;">
     <tr>
-      <td align="center" style="padding:40px 15px;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="
-          max-width:520px;
-          background:#ffffff;
-          border-radius:14px;
-          overflow:hidden;
-          box-shadow:0 12px 40px rgba(0,0,0,0.10);
-        ">
-          <!-- ===== HEADER / BRAND BANNER ===== -->
+      <td align="center" style="padding: 40px 16px;">
+        <table class="email-container dark-card" role="presentation" cellpadding="0" cellspacing="0" border="0"
+          width="520" style="max-width: 520px; width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #fed7aa; box-shadow:0 12px 40px rgba(234,88,12,0.12);">
           <tr>
-            <td style="
-              background: linear-gradient(135deg, #1a2a4a 0%, #243b62 100%);
-              padding:28px 24px 20px;
-              text-align:center;
-            ">
-              <div style="margin-bottom:6px;">
-                <span style="
-                  font-size:11px;
-                  font-weight:600;
-                  letter-spacing:3px;
-                  color:#c9a84c;
-                  text-transform:uppercase;
-                ">Our City</span>
-              </div>
-              <div style="
-                font-size:28px;
-                font-weight:800;
-                color:#ffffff;
-                letter-spacing:1.5px;
-                line-height:1.2;
-              ">
-                NIRMAN <span style="color:#c9a84c;">PVT. LTD.</span>
-              </div>
-              <div style="
-                margin-top:6px;
-                font-size:11px;
-                color:#a0b4cc;
-                letter-spacing:2px;
-                text-transform:uppercase;
-              ">Building Better Communities</div>
-              <div style="
-                margin:18px auto 0;
-                width:56px;
-                height:2px;
-                background:linear-gradient(90deg, transparent, #c9a84c, transparent);
-                border-radius:2px;
-              "></div>
-              <h2 style="
-                margin:16px 0 4px;
-                font-size:19px;
-                font-weight:700;
-                color:#ffffff;
-                letter-spacing:0.5px;
-              ">📦 Delivery Confirmation OTP</h2>
-              <p style="margin:6px 0 0; font-size:13px; color:#a0b4cc;">
-                Order <strong style="color:#e8c96a; font-size:14px;">#${orderNumber}</strong>
-              </p>
+            <td class="header-cell" align="center" style="background-color: #ea580c; padding: 28px 32px;">
+              <p class="company-name" style="margin: 0 0 4px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: 0.3px;">Our City Nirman Pvt. Ltd.</p>
+              <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 13px; color: rgba(255,255,255,0.88);">Building Better Cities Together</p>
             </td>
           </tr>
-          <!-- ===== BODY ===== -->
+          <tr><td height="4" style="background-color: #fb923c; font-size:0; line-height:0;">&nbsp;</td></tr>
           <tr>
-            <td style="padding:36px 32px 28px; text-align:center; color:#2d3748;">
-              <p style="margin:0 0 4px; font-size:16px; font-weight:700; color:#1a2a4a;">
-                Hello, ${customerName} 👋
+            <td class="email-body-cell dark-card" align="center" style="padding: 36px 40px 32px; background-color: #ffffff;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto 20px;">
+                <tr>
+                  <td align="center" style="width: 60px; height: 60px; background-color: #fff7ed; border: 2px solid #fed7aa; border-radius: 50%; font-size: 26px; line-height: 60px; text-align: center;">📦</td>
+                </tr>
+              </table>
+              <h1 style="margin: 0 0 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 22px; font-weight: 700; color: #9a3412; text-align: center;">Delivery Confirmation OTP</h1>
+              <p style="margin: 0 0 6px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; color: #374151; text-align: center;">Hello <strong>${customerName}</strong> 👋,</p>
+              
+              <p style="margin: 0 0 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; color: #6b7280; text-align: center; line-height: 1.7;">
+                Your order <strong style="color: #ea580c;">#${orderNumber}</strong> is out for delivery!<br/>
+                Please share the OTP below with our delivery executive to verify and confirm safe receipt.
               </p>
-              <p style="margin:0 0 26px; font-size:14px; color:#5a6a80; line-height:1.75;">
-                Your order from <strong style="color:#1a2a4a;">Our City Nirman Pvt. Ltd.</strong> is out for delivery!<br/>
-                Please share the OTP below with our delivery executive to confirm safe receipt.
-              </p>
-              <!-- OTP Display Box -->
-              <div style="
-                display:inline-block;
-                margin:0 auto 6px;
-                padding:20px 40px;
-                background:linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%);
-                border-radius:12px;
-                border:2px solid #c9a84c;
-                letter-spacing:12px;
-                font-size:36px;
-                font-weight:900;
-                color:#1a2a4a;
-                font-family:'Courier New', monospace;
-              ">
-                ${otp}
-              </div>
-              <p style="margin:18px 0 0; font-size:13px; color:#718096;">
-                ⏱&nbsp; This OTP is valid for <strong style="color:#243b62;">10 minutes</strong> only.
-              </p>
-              <!-- Warning Banner -->
-              <div style="
-                margin:18px 0 0;
-                padding:12px 16px;
-                background:#fff8f0;
-                border-radius:8px;
-                border-left:4px solid #c9a84c;
-                text-align:left;
-              ">
-                <p style="margin:0; font-size:13px; color:#744210; font-weight:600;">
-                  🔒 Security Notice
-                </p>
-                <p style="margin:6px 0 0; font-size:12px; color:#7d5a36; line-height:1.6;">
-                  Our City Nirman Pvt. Ltd. will <u>never</u> ask for this OTP over call, WhatsApp, or email.
-                  Share it <strong>only</strong> with the delivery executive physically present at your door.
-                </p>
-              </div>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto 12px;">
+                <tr>
+                  <td class="otp-box" align="center" style="background-color: #fff7ed; border: 2px solid #fb923c; border-radius: 12px; padding: 18px 32px; font-family: 'Courier New', Courier, monospace; font-size: 32px; font-weight: 700; letter-spacing: 10px; color: #ea580c; text-align: center;">${otp}</td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 6px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 13px; color: #f97316; font-weight: 500; text-align: center;">&#9201; Valid for <strong>10 minutes only</strong></p>
+              
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top: 24px;">
+                <tr>
+                  <td style="background-color: #fff7ed; border: 1px solid #fed7aa; border-left: 4px solid #f97316; border-radius: 8px; padding: 14px 16px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 13px; color: #9a3412; line-height: 1.6; text-align: left;">
+                    🔒 <strong>Security Notice:</strong> Our City Nirman Pvt. Ltd. will never ask for this OTP over a call, WhatsApp, or SMS. Share this code <strong>only</strong> with the delivery agent physically present at your door.
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
-          <!-- ===== FOOTER ===== -->
+          <tr><td style="padding: 0 40px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td height="1" style="background-color: #ffedd5; font-size:0; line-height:0;">&nbsp;</td></tr></table></td></tr>
           <tr>
-            <td style="
-              background:#f7f9fc;
-              border-top:1px solid #e2e8f0;
-              padding:22px 24px;
-              text-align:center;
-            ">
-              <p style="
-                margin:0 0 4px;
-                font-size:13px;
-                font-weight:800;
-                color:#1a2a4a;
-                letter-spacing:0.8px;
-                text-transform:uppercase;
-              ">
-                Our City Nirman Pvt. Ltd.
-              </p>
-              <p style="margin:0 0 10px; font-size:11px; color:#b0bec5;">
-                © 2026 Our City Nirman Pvt. Ltd. All rights reserved.
-              </p>
+            <td class="dark-footer" align="center" style="background-color: #fff7ed; padding: 18px 32px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 12px; color: #a16207; line-height: 1.7;">
+              <p style="margin: 0 0 3px;">&copy; 2026 <strong>Our City Nirman Pvt. Ltd.</strong> &middot; All rights reserved</p>
+              <p style="margin: 0; color: #d97706;">This is an automated email. Please do not reply.</p>
             </td>
           </tr>
         </table>
@@ -147,6 +105,7 @@ const getDeliveryOTPTemplate = (otp, orderNumber, customerName) => `
     </tr>
   </table>
 </body>
+</html>
 `;
 
 /**
