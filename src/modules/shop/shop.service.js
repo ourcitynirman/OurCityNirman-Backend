@@ -496,6 +496,14 @@ class ShopService {
         const stats = await OrderItem.aggregate([
             { $match: { vendor: new mongoose.Types.ObjectId(vendorId) } },
             {
+                $lookup: {
+                    from: "commissions",
+                    localField: "order_id",
+                    foreignField: "order_id",
+                    as: "commissionInfo"
+                }
+            },
+            {
                 $group: {
                     _id: null,
                     totalRevenue: { 
@@ -513,12 +521,18 @@ class ShopService {
                         $sum: {
                             $cond: [{ $eq: ["$itemStatus", "shipped"] }, 1, 0]
                         }
+                    },
+                    totalCommissionPaid: {
+                        $sum: {
+                            $cond: [{ $eq: ["$itemStatus", "delivered"] }, { $multiply: ["$totalPrice", 0.05] }, 0] // Dummy 5% if no commission record
+                        }
                     }
                 }
             }
         ]);
 
-        const dashboardStats = stats[0] || { totalRevenue: 0, totalOrders: 0, pendingOrders: 0, shippedOrders: 0 };
+        const dashboardStats = stats[0] || { totalRevenue: 0, totalOrders: 0, pendingOrders: 0, shippedOrders: 0, totalCommissionPaid: 0 };
+        const netEarnings = dashboardStats.totalRevenue - dashboardStats.totalCommissionPaid;
 
         // 2. Product Stats
         const productStats = await Product.aggregate([
@@ -543,6 +557,21 @@ class ShopService {
         const categoryMix = await Product.aggregate([
             { $match: { vendorId: new mongoose.Types.ObjectId(vendorId) } },
             { $group: { _id: "$category", count: { $sum: 1 } } },
+            {
+                $lookup: {
+                    from: "categories",
+                    localField: "_id",
+                    foreignField: "_id",
+                    as: "categoryDetails"
+                }
+            },
+            {
+                $project: {
+                    _id: 1,
+                    count: 1,
+                    name: { $arrayElemAt: ["$categoryDetails.name", 0] }
+                }
+            },
             { $sort: { count: -1 } }
         ]);
 
@@ -580,10 +609,28 @@ class ShopService {
             {
                 $group: {
                     _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
-                    revenue: { $sum: "$totalPrice" }
+                    revenue: { $sum: "$totalPrice" },
+                    orders: { $sum: 1 }
                 }
             },
             { $sort: { "_id.year": 1, "_id.month": 1 } }
+        ]);
+
+        // Daily Trend
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const dailyOrders = await OrderItem.aggregate([
+            { $match: { vendor: new mongoose.Types.ObjectId(vendorId), createdAt: { $gte: sevenDaysAgo } } },
+            { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, orders: { $sum: 1 }, revenue: { $sum: "$totalPrice" } } },
+            { $sort: { _id: 1 } }
+        ]);
+
+        // Top Selling Products
+        const topSellingProducts = await OrderItem.aggregate([
+            { $match: { vendor: new mongoose.Types.ObjectId(vendorId), itemStatus: 'delivered' } },
+            { $group: { _id: "$product", revenue: { $sum: "$totalPrice" }, units: { $sum: "$quantity" }, name: { $first: "$productSnapshot.name" } } },
+            { $sort: { revenue: -1 } },
+            { $limit: 5 }
         ]);
 
         // 6. Shop Info
@@ -591,6 +638,8 @@ class ShopService {
 
         return {
             totalRevenue: dashboardStats.totalRevenue || 0,
+            netEarnings: netEarnings || 0,
+            totalCommissionPaid: dashboardStats.totalCommissionPaid || 0,
             totalOrders: dashboardStats.totalOrders || 0,
             pendingOrders: dashboardStats.pendingOrders || 0,
             shippedOrders: dashboardStats.shippedOrders || 0,
@@ -603,6 +652,8 @@ class ShopService {
             lowStockProducts,
             recentReviews,
             revenueChart: revenueHistory, 
+            dailyOrders,
+            topSellingProducts,
             shop
         };
 
