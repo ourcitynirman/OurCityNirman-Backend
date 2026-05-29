@@ -4,20 +4,20 @@
  *          Handles graceful shutdown on SIGTERM / SIGINT (required for production).
  */
 
-// ── 1. Load environment FIRST (before any other import uses process.env) ──
+// ── 1. Load environment FIRST (before any other import uses process.env) 
 import { loadEnv, validateEnv } from './shared/utils/env.utils.js';
 loadEnv();
 
-// ── 2. Validate required env vars ─────────────────────────────────────────
+// ── 2. Validate required env vars 
 validateEnv();
 
-// ── 3. App & DB ────────────────────────────────────────────────────────────
+// ── 3. App & DB 
 import connectDB from './shared/db/DbConnect.js';
 import { app }   from './app.js';
 
 const PORT = parseInt(process.env.PORT, 10) || 5000;
 
-// ── 4. Boot sequence ───────────────────────────────────────────────────────
+// ── 4. Boot sequence 
 connectDB()
     .then(() => {
         const server = app.listen(PORT, () => {
