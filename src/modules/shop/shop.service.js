@@ -45,24 +45,35 @@ class ShopService {
 
         const shopCode = await generateVendorId();
 
+        const uploadTasks = [];
         let logoUrl = null;
         let bannerUrl = null;
-        if (files?.logo?.[0]?.path) logoUrl = await uploadFile(files.logo[0].path, "shops/logos");
-        if (files?.banner?.[0]?.path) bannerUrl = await uploadFile(files.banner[0].path, "shops/banners");
-
-        // Process verification documents if provided during registration
         let gstUrl = null;
         let panUrl = null;
+        let shopPhotoUrl = null;
         let otherUrl = null;
-        let vStatus = "not_requested";
 
-        if (files?.gstDocument?.[0]?.path) gstUrl = await uploadFile(files.gstDocument[0].path, "shops/verification/gst");
-        if (files?.panDocument?.[0]?.path) panUrl = await uploadFile(files.panDocument[0].path, "shops/verification/pan");
-        if (files?.shopPhoto?.[0]?.path) {
-            const photoUrl = await uploadFile(files.shopPhoto[0].path, "shops/verification/photos");
-            var shopPhotoUrl = photoUrl;
+        if (files?.logo?.[0]?.path) {
+            uploadTasks.push(uploadFile(files.logo[0].path, "shops/logos").then(url => logoUrl = url));
         }
-        if (files?.otherDocument?.[0]?.path) otherUrl = await uploadFile(files.otherDocument[0].path, "shops/verification/other");
+        if (files?.banner?.[0]?.path) {
+            uploadTasks.push(uploadFile(files.banner[0].path, "shops/banners").then(url => bannerUrl = url));
+        }
+        if (files?.gstDocument?.[0]?.path) {
+            uploadTasks.push(uploadFile(files.gstDocument[0].path, "shops/verification/gst").then(url => gstUrl = url));
+        }
+        if (files?.panDocument?.[0]?.path) {
+            uploadTasks.push(uploadFile(files.panDocument[0].path, "shops/verification/pan").then(url => panUrl = url));
+        }
+        if (files?.shopPhoto?.[0]?.path) {
+            uploadTasks.push(uploadFile(files.shopPhoto[0].path, "shops/verification/photos").then(url => shopPhotoUrl = url));
+        }
+        if (files?.otherDocument?.[0]?.path) {
+            uploadTasks.push(uploadFile(files.otherDocument[0].path, "shops/verification/other").then(url => otherUrl = url));
+        }
+
+        await Promise.all(uploadTasks);
+        let vStatus = "not_requested";
 
         if (gstUrl || panUrl || shopPhotoUrl || otherUrl) vStatus = "pending";
 
@@ -125,22 +136,25 @@ class ShopService {
         let photoUrl = shop.verificationDocs?.shopPhoto || null;
         let otherUrl = shop.verificationDocs?.otherDocument || null;
 
+        const verificationUploadTasks = [];
         if (gstPath) {
-            if (gstUrl) await safeDelete(gstUrl);  
-            gstUrl = await uploadFile(gstPath, "shops/verification/gst");
+            if (gstUrl) verificationUploadTasks.push(safeDelete(gstUrl));
+            verificationUploadTasks.push(uploadFile(gstPath, "shops/verification/gst").then(url => gstUrl = url));
         }
         if (panPath) {
-            if (panUrl) await safeDelete(panUrl);
-            panUrl = await uploadFile(panPath, "shops/verification/pan");
+            if (panUrl) verificationUploadTasks.push(safeDelete(panUrl));
+            verificationUploadTasks.push(uploadFile(panPath, "shops/verification/pan").then(url => panUrl = url));
         }
         if (photoPath) {
-            if (photoUrl) await safeDelete(photoUrl);
-            photoUrl = await uploadFile(photoPath, "shops/verification/photos");
+            if (photoUrl) verificationUploadTasks.push(safeDelete(photoUrl));
+            verificationUploadTasks.push(uploadFile(photoPath, "shops/verification/photos").then(url => photoUrl = url));
         }
         if (otherPath) {
-            if (otherUrl) await safeDelete(otherUrl);
-            otherUrl = await uploadFile(otherPath, "shops/verification/other");
+            if (otherUrl) verificationUploadTasks.push(safeDelete(otherUrl));
+            verificationUploadTasks.push(uploadFile(otherPath, "shops/verification/other").then(url => otherUrl = url));
         }
+
+        await Promise.all(verificationUploadTasks);
 
         const isReRequest = shop.verificationStatus === "rejected";
         const action = isReRequest ? "re_requested" : "requested";
@@ -197,8 +211,16 @@ class ShopService {
         if (updateData.availability) { Object.assign(shop.availability, updateData.availability); shop.markModified("availability"); }
         if (updateData.bankDetails) { Object.assign(shop.bankDetails, updateData.bankDetails); shop.markModified("bankDetails"); }
 
-        if (files?.logo?.[0]?.path) { await safeDelete(shop.logo); shop.logo = await uploadFile(files.logo[0].path, "shops/logos"); }
-        if (files?.banner?.[0]?.path) { await safeDelete(shop.banner); shop.banner = await uploadFile(files.banner[0].path, "shops/banners"); }
+        const updateTasks = [];
+        if (files?.logo?.[0]?.path) {
+            updateTasks.push(safeDelete(shop.logo));
+            updateTasks.push(uploadFile(files.logo[0].path, "shops/logos").then(url => shop.logo = url));
+        }
+        if (files?.banner?.[0]?.path) {
+            updateTasks.push(safeDelete(shop.banner));
+            updateTasks.push(uploadFile(files.banner[0].path, "shops/banners").then(url => shop.banner = url));
+        }
+        await Promise.all(updateTasks);
 
         await shop.save();
         
