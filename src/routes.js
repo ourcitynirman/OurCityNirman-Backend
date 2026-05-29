@@ -34,6 +34,7 @@ import sliderRouter       from './modules/homeslider/homeslider.route.js';
 import settingsRouter     from './modules/settings/settings.route.js';
 import shopFollowerRouter from './modules/shop-follower/shop-follower.route.js';
 import teamRouter         from './modules/team/team.route.js';
+import pincodeRouter      from './modules/pincode/pincode.route.js';
 
 // ── Route Registry ────────────────────────────────────────────────────────────
 /**
@@ -222,4 +223,11 @@ export function registerRoutes(app) {
      * @desc    Account preferences and notification settings
      */
     app.use('/api/v1/settings', settingsRouter);
+
+    /**
+     * @prefix  /api/v1/pincode
+     * @access  Public
+     * @desc    Proxy for postalpincode API to bypass CORS/SSL issues
+     */
+    app.use('/api/v1/pincode', pincodeRouter);
 }
