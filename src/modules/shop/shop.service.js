@@ -127,10 +127,6 @@ class ShopService {
             shop.verificationDocs?.shopPhoto || 
             shop.verificationDocs?.otherDocument;
 
-        if (!hasNewDoc && !hasExistingDoc) {
-            throw new ApiError(400, "Please upload at least one document (GST, PAN, Shop Photo, or Other) to request verification");
-        }
-
         let gstUrl = shop.verificationDocs?.gstDocument || null;
         let panUrl = shop.verificationDocs?.panDocument || null;
         let photoUrl = shop.verificationDocs?.shopPhoto || null;
