@@ -61,14 +61,22 @@ router.get("/:id/breadcrumb", getCategoryBreadcrumb);
  * @route   POST /api/v1/categories
  * @access  Private (Admin)
  */
-router.post("/", verifyJWT, authorize("admin"), upload.single("image"), createCategory);
+router.post("/", verifyJWT, authorize("admin"), upload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "icon", maxCount: 1 },
+    { name: "banner", maxCount: 1 }
+]), createCategory);
 
 /**
  * @desc    Update existing category details or replace image
  * @route   PATCH /api/v1/categories/:id
  * @access  Private (Admin)
  */
-router.patch("/:id", verifyJWT, authorize("admin"), upload.single("image"), updateCategory);
+router.patch("/:id", verifyJWT, authorize("admin"), upload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "icon", maxCount: 1 },
+    { name: "banner", maxCount: 1 }
+]), updateCategory);
 
 /**
  * @desc    Toggle category active/inactive status (affects storefront visibility)

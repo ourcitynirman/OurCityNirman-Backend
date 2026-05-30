@@ -33,8 +33,20 @@ export const createCategorySchema = z.object({
     description: z.string().trim().max(1000, "Description cannot exceed 1000 characters").optional().nullable(),
     image: z.any().optional().nullable(),
     icon: z.any().optional().nullable(),
+    banner: z.any().optional().nullable(),
     parent: objectIdSchema.optional().nullable(),
     sortOrder: z.preprocess((val) => (val !== undefined ? Number(val) : 0), z.number().int().optional()),
+    featured: z.preprocess((val) => val === 'true' || val === true, z.boolean().optional()),
+    seo: z.preprocess((val) => {
+        if (typeof val === 'string') {
+            try { return JSON.parse(val); } catch { return {}; }
+        }
+        return val;
+    }, z.object({
+        metaTitle: z.string().trim().max(100).optional().nullable(),
+        metaDescription: z.string().trim().max(300).optional().nullable(),
+        keywords: z.string().trim().optional().nullable(),
+    }).optional().nullable()),
 });
 
 export const updateCategorySchema = z.object({
@@ -42,8 +54,24 @@ export const updateCategorySchema = z.object({
     description: z.string().trim().max(1000).optional().nullable(),
     image: z.any().optional().nullable(),
     icon: z.any().optional().nullable(),
+    banner: z.any().optional().nullable(),
     parent: objectIdSchema.optional().nullable(),
     sortOrder: z.preprocess((val) => (val !== undefined ? Number(val) : undefined), z.number().int().optional()),
+    featured: z.preprocess((val) => {
+        if (val === 'true') return true;
+        if (val === 'false') return false;
+        return val;
+    }, z.boolean().optional()),
+    seo: z.preprocess((val) => {
+        if (typeof val === 'string') {
+            try { return JSON.parse(val); } catch { return undefined; }
+        }
+        return val;
+    }, z.object({
+        metaTitle: z.string().trim().max(100).optional().nullable(),
+        metaDescription: z.string().trim().max(300).optional().nullable(),
+        keywords: z.string().trim().optional().nullable(),
+    }).optional().nullable()),
     isActive: z.preprocess((val) => {
         if (val === 'true') return true;
         if (val === 'false') return false;

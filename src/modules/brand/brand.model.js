@@ -15,7 +15,16 @@ const brandSchema = new mongoose.Schema({
   },
   logo: {
     type: String,
-    default: null
+    trim: true
+  },
+  image: {
+    type: String
+  },
+  banner: {
+    type: String
+  },
+  icon: {
+    type: String
   },
   description: {
     type: String,
@@ -39,6 +48,36 @@ const brandSchema = new mongoose.Schema({
   popularityScore: {
     type: Number,
     default: 0,
+    index: true
+  },
+
+  seoTitle: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'SEO Title cannot exceed 100 characters']
+  },
+  seoDescription: {
+    type: String,
+    trim: true,
+    maxlength: [300, 'SEO Description cannot exceed 300 characters']
+  },
+
+  isFeatured: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  
+  isVerified: {
+    type: Boolean,
+    default: true,
+    index: true
+  },
+
+  status: {
+    type: String,
+    enum: ['active', 'inactive', 'pending'],
+    default: 'active',
     index: true
   }
 

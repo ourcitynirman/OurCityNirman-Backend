@@ -22,8 +22,21 @@ const categorySchema = new mongoose.Schema(
     image: {
       type: String
     },
+    banner: {
+      type: String
+    },
     icon: {
       type: String
+    },
+    featured: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    seo: {
+      metaTitle: { type: String, trim: true, maxlength: 100 },
+      metaDescription: { type: String, trim: true, maxlength: 300 },
+      keywords: { type: String, trim: true }
     },
     parent: {
       type: mongoose.Schema.Types.ObjectId,

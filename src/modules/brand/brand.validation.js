@@ -31,17 +31,43 @@ export const categoryIdParamSchema = z.object({
 export const createBrandSchema = z.object({
     name: z.string().trim().min(1, "Brand name is required"),
     logo: z.string().trim().optional().nullable(),
+    image: z.any().optional().nullable(),
+    banner: z.any().optional().nullable(),
+    icon: z.any().optional().nullable(),
     description: z.string().trim().max(500, "Description cannot exceed 500 characters").optional().nullable(),
     categoryId: objectIdSchema.optional(), // Added to support frontend FormData
-    categories: z.array(objectIdSchema).optional().default([]),
+    categories: z.preprocess((val) => {
+        if (!val) return [];
+        if (Array.isArray(val)) return val;
+        if (typeof val === 'string') return [val];
+        return [];
+    }, z.array(objectIdSchema).optional().default([])),
+    seoTitle: z.string().trim().max(100).optional().nullable(),
+    seoDescription: z.string().trim().max(300).optional().nullable(),
+    isFeatured: z.preprocess((val) => val === 'true' || val === true, z.boolean().optional().default(false)),
+    isVerified: z.preprocess((val) => val === 'true' || val === true, z.boolean().optional().default(true)),
+    status: z.enum(['active', 'inactive', 'pending']).optional().default('active'),
 });
 
 export const updateBrandSchema = z.object({
     name: z.string().trim().min(1, "Brand name cannot be empty").optional(),
     logo: z.string().trim().optional().nullable(),
+    image: z.any().optional().nullable(),
+    banner: z.any().optional().nullable(),
+    icon: z.any().optional().nullable(),
     description: z.string().trim().max(500, "Description cannot exceed 500 characters").optional().nullable(),
     categoryId: objectIdSchema.optional(), // Added to support frontend FormData
-    categories: z.array(objectIdSchema).optional(),
+    categories: z.preprocess((val) => {
+        if (!val) return undefined;
+        if (Array.isArray(val)) return val;
+        if (typeof val === 'string') return [val];
+        return undefined;
+    }, z.array(objectIdSchema).optional()),
+    seoTitle: z.string().trim().max(100).optional().nullable(),
+    seoDescription: z.string().trim().max(300).optional().nullable(),
+    isFeatured: z.preprocess((val) => val === 'true' || val === true, z.boolean().optional()),
+    isVerified: z.preprocess((val) => val === 'true' || val === true, z.boolean().optional()),
+    status: z.enum(['active', 'inactive', 'pending']).optional(),
     isActive: z.preprocess((val) => {
         if (typeof val === 'string') return val === 'true';
         return val;

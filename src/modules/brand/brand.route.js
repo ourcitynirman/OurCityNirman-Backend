@@ -22,9 +22,19 @@ BrandRouter.get('/by-category/:categoryId', getBrandsByCategory);
 /**
  * ADMIN ROUTES (Protected)
  */
-BrandRouter.post('/', verifyJWT, authorize('admin', 'vendor'), upload.single('logo'), createBrand);
+BrandRouter.post('/', verifyJWT, authorize('admin', 'vendor'), upload.fields([
+    { name: 'logo', maxCount: 1 },
+    { name: 'image', maxCount: 1 },
+    { name: 'banner', maxCount: 1 },
+    { name: 'icon', maxCount: 1 }
+]), createBrand);
 
-BrandRouter.patch('/:id', verifyJWT, authorize('admin'), upload.single('logo'), updateBrand);
+BrandRouter.patch('/:id', verifyJWT, authorize('admin'), upload.fields([
+    { name: 'logo', maxCount: 1 },
+    { name: 'image', maxCount: 1 },
+    { name: 'banner', maxCount: 1 },
+    { name: 'icon', maxCount: 1 }
+]), updateBrand);
 BrandRouter.delete('/:id', verifyJWT, authorize('admin'), deleteBrand);
 
 export default BrandRouter;

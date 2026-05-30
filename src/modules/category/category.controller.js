@@ -63,7 +63,7 @@ export const getCategoryBreadcrumb = asyncHandler(async (req, res) => {
  */
 export const createCategory = asyncHandler(async (req, res) => {
     const validatedData = createCategorySchema.parse(req.body);
-    const category = await CategoryService.createCategory(validatedData, req.file);
+    const category = await CategoryService.createCategory(validatedData, req.files);
     res.status(201).json(new ApiResponse(201, category, "Created successfully"));
 });
 
@@ -74,7 +74,7 @@ export const updateCategory = asyncHandler(async (req, res) => {
     const { id } = categoryIdParamSchema.parse(req.params);
     const validatedData = updateCategorySchema.parse(req.body);
     
-    const category = await CategoryService.updateCategory(id, validatedData, req.file);
+    const category = await CategoryService.updateCategory(id, validatedData, req.files);
     res.status(200).json(new ApiResponse(200, category, "Updated successfully"));
 });
 

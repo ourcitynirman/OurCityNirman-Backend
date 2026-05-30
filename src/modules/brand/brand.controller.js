@@ -60,7 +60,12 @@ export const createBrand = async (req, res) => {
 
         // Validate
         const brandData = createBrandSchema.parse(body);
-        if (req.file) brandData.logo = req.file.path;
+        if (req.files) {
+            if (req.files.logo && req.files.logo[0]) brandData.logo = req.files.logo[0].path;
+            if (req.files.image && req.files.image[0]) brandData.image = req.files.image[0].path;
+            if (req.files.banner && req.files.banner[0]) brandData.banner = req.files.banner[0].path;
+            if (req.files.icon && req.files.icon[0]) brandData.icon = req.files.icon[0].path;
+        }
 
         const brand = await BrandService.createBrand(brandData);
         return res.status(201).json(new ApiResponse(201, brand, "Brand created successfully"));
@@ -106,7 +111,12 @@ export const updateBrand = async (req, res) => {
         }
 
         const updates = updateBrandSchema.parse(body);
-        if (req.file) updates.logo = req.file.path;
+        if (req.files) {
+            if (req.files.logo && req.files.logo[0]) updates.logo = req.files.logo[0].path;
+            if (req.files.image && req.files.image[0]) updates.image = req.files.image[0].path;
+            if (req.files.banner && req.files.banner[0]) updates.banner = req.files.banner[0].path;
+            if (req.files.icon && req.files.icon[0]) updates.icon = req.files.icon[0].path;
+        }
 
         const brand = await BrandService.updateBrand(id, updates);
         return res.status(200).json(new ApiResponse(200, brand, "Brand updated successfully"));
