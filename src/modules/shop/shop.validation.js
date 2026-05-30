@@ -30,7 +30,7 @@ export const createShopSchema = z.object({
     category: objectIdSchema,
     storeType: z.enum(["retailer", "wholesaler", "manufacturer", "distributor", "service_provider", "other"]).optional().nullable(),
     description: z.string().max(1000).optional().nullable(),
-    tagline: z.string().max(150).optional().nullable(),
+    tagline: z.string().min(2, "Tagline is required").max(150),
     phone: z.string().optional().nullable(),
     alternativephone: z.string().optional().nullable(),
     email: z.string().email().optional().nullable(),
