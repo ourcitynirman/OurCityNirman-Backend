@@ -216,6 +216,24 @@ productSchema.pre('save', async function () {
       } else {
         this.categoryAncestors = [];
       }
+
+      // Automatically fetch and assign the HSN code based on category hierarchy
+      const HSNModel = mongoose.models.HSN || mongoose.model('HSN');
+      let hsnRecord = await HSNModel.findOne({ category: this.category, is_active: true });
+      
+      // If no direct HSN, check parent categories from bottom-up
+      if (!hsnRecord && category && category.ancestors && category.ancestors.length > 0) {
+        for (let i = category.ancestors.length - 1; i >= 0; i--) {
+          hsnRecord = await HSNModel.findOne({ category: category.ancestors[i]._id, is_active: true });
+          if (hsnRecord) break;
+        }
+      }
+      
+      if (hsnRecord) {
+        this.hsn = hsnRecord._id;
+      } else {
+        this.hsn = null;
+      }
     }
 
   } catch (error) {
