@@ -33,13 +33,13 @@ const vendorProfileSchema = new mongoose.Schema(
         },
         aadharNumber: {
             type: String,
-            required: [true, "Aadhar number is required"],
+            sparse: true,
             unique: true,
             trim: true,
         },
         panNumber: {
             type: String,
-            required: [true, "PAN number is required"],
+            sparse: true,
             unique: true,
             trim: true,
             uppercase: true,
